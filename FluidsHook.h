@@ -7,14 +7,15 @@
 #include "SimParameters.h"
 #include <set>
 #include "CollisionDetection.h"
+#include "Particle.h"
 
 class RigidBodyTemplate;
 class RigidBodyInstance;
 
-class BirdsHook : public PhysicsHook
+class FluidsHook : public PhysicsHook
 {
 public:
-    BirdsHook();    
+    FluidsHook();    
 
     virtual void drawGUI(igl::opengl::glfw::imgui::ImGuiMenu &menu);
 
@@ -55,4 +56,6 @@ private:
     Eigen::MatrixXd renderQ;
     Eigen::MatrixXi renderF;
 
+    double viscosityKernelLaplace(double distance, double h);
+    double pressureKernelLaplace(double distance, double h);
 };

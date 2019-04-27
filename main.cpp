@@ -1,7 +1,7 @@
 #include <igl/opengl/glfw/Viewer.h>
 #include <thread>
 #include "PhysicsHook.h"
-#include "BirdsHook.h"
+#include "FluidsHook.h"
 #include <igl/unproject.h>
 #include <igl/opengl/glfw/imgui/ImGuiMenu.h>
 #include <igl/opengl/glfw/imgui/ImGuiHelpers.h>
@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
 {
     igl::opengl::glfw::Viewer viewer;
 
-    hook = new BirdsHook();
+    hook = new FluidsHook();
     hook->reset();
 
     viewer.data().set_face_based(true);

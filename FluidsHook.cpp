@@ -1,20 +1,23 @@
-#include "BirdsHook.h"
+#include "FluidsHook.h"
 #include "RigidBodyTemplate.h"
 #include "RigidBodyInstance.h"
 #include "VectorMath.h"
 #include "igl/opengl/glfw/imgui/ImGuiHelpers.h"
 #include "CollisionDetection.h"
+#include "Particle.h"
 #include <Eigen/Geometry>
 
 using namespace Eigen;
 
-BirdsHook::BirdsHook() : PhysicsHook(), sceneFile_("box.scn")
+#define PI 3.14159265358979323846
+
+FluidsHook::FluidsHook() : PhysicsHook(), sceneFile_("box.scn")
 {
     birdTemplate_ = NULL;
     launch_ = false;
 }
 
-void BirdsHook::drawGUI(igl::opengl::glfw::imgui::ImGuiMenu &menu)
+void FluidsHook::drawGUI(igl::opengl::glfw::imgui::ImGuiMenu &menu)
 {
     if (ImGui::CollapsingHeader("Scene", ImGuiTreeNodeFlags_DefaultOpen))
     {
@@ -37,7 +40,7 @@ void BirdsHook::drawGUI(igl::opengl::glfw::imgui::ImGuiMenu &menu)
     }    
 }
 
-void BirdsHook::updateRenderGeometry()
+void FluidsHook::updateRenderGeometry()
 {
     int totverts = 0;
     int totfaces = 0;
@@ -91,14 +94,14 @@ void BirdsHook::updateRenderGeometry()
 }
 
 
-void BirdsHook::initSimulation()
+void FluidsHook::initSimulation()
 {
     time_ = 0;    
     loadScene();
     updateRenderGeometry();
 }
 
-void BirdsHook::tick()
+void FluidsHook::tick()
 {    
     launchMutex_.lock();
 
@@ -117,7 +120,7 @@ void BirdsHook::tick()
     launchMutex_.unlock();
 }
 
-void BirdsHook::computeForces(VectorXd &Fc, VectorXd &Ftheta)
+void FluidsHook::computeForces(VectorXd &Fc, VectorXd &Ftheta)
 {
     Fc.resize(3*bodies_.size());
     Ftheta.resize(3*bodies_.size());
@@ -134,7 +137,7 @@ void BirdsHook::computeForces(VectorXd &Fc, VectorXd &Ftheta)
     }
 }
 
-bool BirdsHook::mouseClicked(igl::opengl::glfw::Viewer &viewer, Eigen::Vector3d dir, int button)
+bool FluidsHook::mouseClicked(igl::opengl::glfw::Viewer &viewer, Eigen::Vector3d dir, int button)
 {
     if (button != 2)
         return false;
@@ -154,7 +157,7 @@ bool BirdsHook::mouseClicked(igl::opengl::glfw::Viewer &viewer, Eigen::Vector3d 
     return true;
 }
 
-bool BirdsHook::simulateOneStep()
+bool FluidsHook::simulateOneStep()
 {   
     time_ += params_.timeStep;
     int nbodies = (int)bodies_.size();
@@ -219,8 +222,11 @@ bool BirdsHook::simulateOneStep()
     return false;
 }
 
-void BirdsHook::loadScene()
+void FluidsHook::loadScene()
 {
+    Particle * pp = new Particle(Eigen::Vector3d(1.0, 1.0, 1.0), Eigen::Vector3d(1.0, 1.0, 1.0), 2.0);
+
+
     for (RigidBodyInstance *rbi : bodies_)
         delete rbi;
     for (RigidBodyTemplate *rbt : templates_)
@@ -272,4 +278,12 @@ void BirdsHook::loadScene()
     std::string birdname = prefix + std::string("meshes/bird2.obj");
     delete birdTemplate_;
     birdTemplate_ = new RigidBodyTemplate(birdname, 0.1);
+}
+
+double FluidsHook::viscosityKernelLaplace(double distance, double h) {
+    return 45.0 / (PI * h * h * h * h * h * h) * (h - distance);
+}
+
+double FluidsHook::pressureKernelLaplace(double distance, double h) {
+    return 945.0 * (h - distance) * (h + distance) * (h*h + 5.0*distance*distance) * (h*h - 3.0*distance*distance) / (32.0 * PI * h*h*h*h*h*h*h*h*h*h*h);
 }
