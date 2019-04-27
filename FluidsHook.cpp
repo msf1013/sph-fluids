@@ -285,5 +285,5 @@ double FluidsHook::viscosityKernelLaplacian(double distance, double h) {
 }
 
 double FluidsHook::pressureKernelGradient(double distance, double h) {
-    return -945.0 * (h*h + 2.0*h*distance - 3.0*distance*distance) * (h*h - distance*distance) * (h*h - distance*distance) / (64.0 * PI * h*h*h*h*h*h*h*h*h*h);
+    return -90.0 * (h - distance) * (h - distance) * (h - distance) / (PI *h*h*h*h*h*h*h);
 }
