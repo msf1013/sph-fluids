@@ -51,10 +51,13 @@ private:
     std::vector<RigidBodyTemplate *> templates_;
     std::vector<RigidBodyInstance *> bodies_;
 
+    RigidBodyTemplate *sphereTemplate_;
     RigidBodyTemplate *birdTemplate_;
 
     Eigen::MatrixXd renderQ;
     Eigen::MatrixXi renderF;
+
+    std::vector<Particle *> particles_;
 
     double viscosityKernelLaplacian(double distance, double h);
     double pressureKernelGradient(double distance, double h);

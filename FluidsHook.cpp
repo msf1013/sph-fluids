@@ -45,47 +45,25 @@ void FluidsHook::updateRenderGeometry()
     int totverts = 0;
     int totfaces = 0;
 
-    // floor
+    totverts = sphereTemplate_->getVerts().rows() * particles_.size();
+    totfaces = sphereTemplate_->getFaces().rows() * particles_.size();
 
-    totverts += 5;
-    totfaces += 4;
-
-    for (RigidBodyInstance *rbi : bodies_)
-    {
-        totverts += rbi->getTemplate().getVerts().rows();
-        totfaces += rbi->getTemplate().getFaces().rows();
-    }
     renderQ.resize(totverts, 3);
     renderF.resize(totfaces, 3);
     int voffset = 0;
     int foffset = 0;
 
-    double floory = -1.0;
-    // floor
-    renderQ.row(0) << 0, floory, 0;
-    renderQ.row(1) << 1e6, floory, 1e6;
-    renderQ.row(2) << -1e6, floory, 1e6;
-    renderQ.row(3) << -1e6, floory, -1e6;
-    renderQ.row(4) << 1e6, floory, -1e6;
-    voffset += 5;
-
-    renderF.row(0) << 0, 2, 1;
-    renderF.row(1) << 0, 3, 2;
-    renderF.row(2) << 0, 4, 3;
-    renderF.row(3) << 0, 1, 4;
-    foffset += 4;
-
-    for (RigidBodyInstance *rbi : bodies_)
+    for (int x = 0; x < particles_.size(); x ++)
     {
-        int nverts = rbi->getTemplate().getVerts().rows();
+        int nverts = sphereTemplate_->getVerts().rows();
         for (int i = 0; i < nverts; i++)
-            renderQ.row(voffset + i) = (rbi->c + VectorMath::rotationMatrix(rbi->theta)*rbi->getTemplate().getVerts().row(i).transpose()).transpose();
-        int nfaces = rbi->getTemplate().getFaces().rows();
+            renderQ.row(voffset + i) = (particles_[x]->position + sphereTemplate_->getVerts().row(i).transpose()).transpose();
+        int nfaces = sphereTemplate_->getFaces().rows();
         for (int i = 0; i < nfaces; i++)
         {
             for (int j = 0; j < 3; j++)
             {
-                renderF(foffset + i, j) = rbi->getTemplate().getFaces()(i, j) + voffset;
+                renderF(foffset + i, j) = sphereTemplate_->getFaces()(i, j) + voffset;
             }
         }
         voffset += nverts;
@@ -224,60 +202,25 @@ bool FluidsHook::simulateOneStep()
 
 void FluidsHook::loadScene()
 {
-    Particle * pp = new Particle(Eigen::Vector3d(1.0, 1.0, 1.0), Eigen::Vector3d(1.0, 1.0, 1.0), 2.0);
+    for (Particle *p : particles_)
+        delete p;
+    particles_.clear();
 
+    double width = 2.0, height = 3.0, depth = 4.0;
+    int num_w = 3, num_h = 3, num_d = 3;
 
-    for (RigidBodyInstance *rbi : bodies_)
-        delete rbi;
-    for (RigidBodyTemplate *rbt : templates_)
-        delete rbt;
-    bodies_.clear();
-    templates_.clear();
-
-    std::string prefix;
-    std::string scenefname = std::string("scenes/") + sceneFile_;
-    std::ifstream ifs(scenefname);
-    if (!ifs)
-    {
-        // run from the build directory?
-        prefix = "../";
-        scenefname = prefix + scenefname;        
-        ifs.open(scenefname);
-        if(!ifs)
-            return;
-    }
-        
-
-    int nbodies;
-    ifs >> nbodies;
-    for (int body = 0; body < nbodies; body++)
-    {
-        std::string meshname;
-        ifs >> meshname;
-        meshname = prefix + std::string("meshes/") + meshname;
-        double scale;
-        ifs >> scale;
-        RigidBodyTemplate *rbt = new RigidBodyTemplate(meshname, scale);
-        double rho;
-        ifs >> rho;
-        Eigen::Vector3d c, theta, cvel, w;
-        for (int i = 0; i < 3; i++)
-            ifs >> c[i];
-        for (int i = 0; i < 3; i++)
-            ifs >> theta[i];
-        for (int i = 0; i < 3; i++)
-            ifs >> cvel[i];
-        for (int i = 0; i < 3; i++)
-            ifs >> w[i];
-        RigidBodyInstance *rbi = new RigidBodyInstance(*rbt, c, theta, cvel, w, rho);
-        templates_.push_back(rbt);
-        bodies_.push_back(rbi);
+    for (int i = 0; i < num_w; i ++) {
+        double x = -width/2.0 + i * width/num_w;
+        for (int j = 0; j < num_h; j ++) {
+            double y = -height/2.0 + j * height/num_h;
+            for (int k = 0; k < num_d; k ++) {
+                double z = -depth/2.0 + k * depth/num_d;
+                particles_.push_back(new Particle(Eigen::Vector3d(x, y, z), Eigen::Vector3d(0.0, 0.0, 0.0), 1.0));
+            }
+        }
     }
 
-    // bird mesh    
-    std::string birdname = prefix + std::string("meshes/bird2.obj");
-    delete birdTemplate_;
-    birdTemplate_ = new RigidBodyTemplate(birdname, 0.1);
+    sphereTemplate_ = new RigidBodyTemplate("../meshes/sphere.obj", 0.1);
 }
 
 double FluidsHook::viscosityKernelLaplacian(double distance, double h) {
