@@ -280,10 +280,10 @@ void FluidsHook::loadScene()
     birdTemplate_ = new RigidBodyTemplate(birdname, 0.1);
 }
 
-double FluidsHook::viscosityKernelLaplace(double distance, double h) {
+double FluidsHook::viscosityKernelLaplacian(double distance, double h) {
     return 45.0 / (PI * h * h * h * h * h * h) * (h - distance);
 }
 
-double FluidsHook::pressureKernelLaplace(double distance, double h) {
-    return 945.0 * (h - distance) * (h + distance) * (h*h + 5.0*distance*distance) * (h*h - 3.0*distance*distance) / (32.0 * PI * h*h*h*h*h*h*h*h*h*h*h);
+double FluidsHook::pressureKernelGradient(double distance, double h) {
+    return -945.0 * (h*h + 2.0*h*distance - 3.0*distance*distance) * (h*h - distance*distance) * (h*h - distance*distance) / (64.0 * PI * h*h*h*h*h*h*h*h*h*h);
 }

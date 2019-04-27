@@ -56,6 +56,6 @@ private:
     Eigen::MatrixXd renderQ;
     Eigen::MatrixXi renderF;
 
-    double viscosityKernelLaplace(double distance, double h);
-    double pressureKernelLaplace(double distance, double h);
+    double viscosityKernelLaplacian(double distance, double h);
+    double pressureKernelGradient(double distance, double h);
 };
