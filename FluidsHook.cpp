@@ -42,33 +42,7 @@ void FluidsHook::drawGUI(igl::opengl::glfw::imgui::ImGuiMenu &menu)
 
 void FluidsHook::updateRenderGeometry()
 {
-    int totverts = 0;
-    int totfaces = 0;
 
-    totverts = sphereTemplate_->getVerts().rows() * particles_.size();
-    totfaces = sphereTemplate_->getFaces().rows() * particles_.size();
-
-    renderQ.resize(totverts, 3);
-    renderF.resize(totfaces, 3);
-    int voffset = 0;
-    int foffset = 0;
-
-    for (int x = 0; x < particles_.size(); x ++)
-    {
-        int nverts = sphereTemplate_->getVerts().rows();
-        for (int i = 0; i < nverts; i++)
-            renderQ.row(voffset + i) = (particles_[x]->position + sphereTemplate_->getVerts().row(i).transpose()).transpose();
-        int nfaces = sphereTemplate_->getFaces().rows();
-        for (int i = 0; i < nfaces; i++)
-        {
-            for (int j = 0; j < 3; j++)
-            {
-                renderF(foffset + i, j) = sphereTemplate_->getFaces()(i, j) + voffset;
-            }
-        }
-        voffset += nverts;
-        foffset += nfaces;
-    }
 }
 
 
@@ -76,7 +50,6 @@ void FluidsHook::initSimulation()
 {
     time_ = 0;    
     loadScene();
-    updateRenderGeometry();
 }
 
 void FluidsHook::tick()
@@ -98,19 +71,29 @@ void FluidsHook::tick()
     launchMutex_.unlock();
 }
 
-void FluidsHook::computeForces(VectorXd &Fc, VectorXd &Ftheta)
+void FluidsHook::computeForces(VectorXd &F)
 {
-    Fc.resize(3*bodies_.size());
-    Ftheta.resize(3*bodies_.size());
-    Fc.setZero();
-    Ftheta.setZero();    
+    F.resize(3*particles_.size());
+    F.setZero();
 
-    if(params_.gravityEnabled)
+    // Gravity force
+    for(int i = 0; i < particles_.size(); i ++)
     {
-        for(int i=0; i<bodies_.size(); i++)
+        F[3*i + 1] -= params_.gravityG;
+    }
+    
+    // Floor force
+    double basestiffness = 10000;
+    double basedrag = 1000.0;
+
+    for(int i = 0; i < particles_.size(); i ++)
+    {
+        if(particles_[i]->position[1] < -1.0)
         {
-            double m = bodies_[i]->density * bodies_[i]->getTemplate().getVolume();
-            Fc[3 * i + 1] -= params_.gravityG*m;
+            double vel = (particles_[i]->position[1] - particles_[i]->prev_position[1])/params_.timeStep;
+            double dist = -1.0 - particles_[i]->position[1];
+
+            F[3*i + 1] += basestiffness*dist - basedrag*dist*vel;
         }
     }
 }
@@ -138,63 +121,14 @@ bool FluidsHook::mouseClicked(igl::opengl::glfw::Viewer &viewer, Eigen::Vector3d
 bool FluidsHook::simulateOneStep()
 {   
     time_ += params_.timeStep;
-    int nbodies = (int)bodies_.size();
-
-    std::vector<Vector3d> oldthetas;
-    for(int bodyidx=0; bodyidx < (int)bodies_.size(); bodyidx++)
-    {
-        RigidBodyInstance &body = *bodies_[bodyidx];
-        body.c += params_.timeStep*body.cvel;
-        Matrix3d Rhw = VectorMath::rotationMatrix(params_.timeStep*body.w);
-        Matrix3d Rtheta = VectorMath::rotationMatrix(body.theta);
-
-        Vector3d oldtheta = body.theta;
-        body.theta = VectorMath::axisAngle(Rtheta*Rhw);  
-        if (body.theta.dot(oldtheta) < 0 && oldtheta.norm() > M_PI/2.0)
-        {
-            double oldnorm = oldtheta.norm();
-            oldtheta = (oldnorm - 2.0*M_PI)*oldtheta/oldnorm;
-        }
-        oldthetas.push_back(oldtheta);
-    }
-
-    std::set<Collision> collisions;
-    collisionDetection(bodies_, collisions);
-
-    Eigen::VectorXd cForce(3 * nbodies);
-    Eigen::VectorXd thetaForce(3 * nbodies);
-    computeForces(cForce, thetaForce);
     
-    // TODO compute and add penalty forces
-    // TODO apply collision impulses
-    
-    for(int bodyidx=0; bodyidx < (int)bodies_.size(); bodyidx++)
-    {        
-        RigidBodyInstance &body = *bodies_[bodyidx];
-        Matrix3d Mi = body.getTemplate().getInertiaTensor();
+    Eigen::VectorXd force(3 * particles_.size());
+    computeForces(force);
 
-        body.cvel += params_.timeStep*cForce.segment<3>(3 * bodyidx) / body.density / body.getTemplate().getVolume();
-
-        Vector3d newwguess(body.w);
-
-        int iter = 0;
-        for (iter = 0; iter < params_.NewtonMaxIters; iter++)
-        {
-            Vector3d term1 = (-VectorMath::TMatrix(-params_.timeStep*newwguess).inverse() * VectorMath::TMatrix(oldthetas[bodyidx])).transpose() * Mi * body.density * newwguess;
-            Vector3d term2 = (VectorMath::TMatrix(params_.timeStep*body.w).inverse()*VectorMath::TMatrix(oldthetas[bodyidx])).transpose() * Mi * body.density * body.w;
-            Vector3d term3 = -params_.timeStep * thetaForce.segment<3>(3 * bodyidx);
-            Vector3d fval = term1 + term2 + term3;
-            if (fval.norm() / body.density / Mi.trace() <= params_.NewtonTolerance)
-                break;
-
-            Matrix3d Df = (-VectorMath::TMatrix(-params_.timeStep*newwguess).inverse() * VectorMath::TMatrix(body.theta)).transpose() * Mi * body.density;
-
-            Vector3d deltaw = Df.inverse() * (-fval);
-            newwguess += deltaw;
-        }
-        std::cout << "Converged in " << iter << " Newton iterations" << std::endl;
-        body.w = newwguess;
-
+    for (int i = 0; i < particles_.size(); i ++) {
+        particles_[i]->prev_position = particles_[i]->position;
+        particles_[i]->position += params_.timeStep*particles_[i]->velocity;
+        particles_[i]->velocity += params_.timeStep*force.segment<3>(3*i);
     }
 
     return false;
@@ -207,7 +141,7 @@ void FluidsHook::loadScene()
     particles_.clear();
 
     double width = 2.0, height = 1.0, depth = 1.0;
-    int num_w = 3, num_h = 3, num_d = 3;
+    int num_w = 5, num_h = 5, num_d = 5;
 
     for (int i = 0; i < num_w; i ++) {
         double x = -width/2.0 + i * width/(num_w - 1.0);
@@ -244,8 +178,6 @@ void FluidsHook::loadScene()
           4, 5,
           5, 7,
           6, 7;
-
-    sphereTemplate_ = new RigidBodyTemplate("../meshes/sphere.obj", 0.1);
 }
 
 double FluidsHook::viscosityKernelLaplacian(double distance, double h) {

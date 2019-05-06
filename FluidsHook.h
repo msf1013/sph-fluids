@@ -32,9 +32,17 @@ public:
     virtual void renderRenderGeometry(igl::opengl::glfw::Viewer &viewer)
     {
         viewer.data().clear();
-        viewer.data().set_mesh(renderQ, renderF);
+        //viewer.data().set_mesh(renderQ, renderF);
 
-        viewer.data().add_points(tankV,Eigen::RowVector3d(1.0, 0.0, 0.0));
+        //viewer.data().add_points(tankV,Eigen::RowVector3d(1.0, 0.0, 0.0));
+
+        Eigen::MatrixXd particlesPos(particles_.size(), 3);
+
+        for (int i = 0; i < particles_.size(); i ++) {
+            particlesPos.row(i) = particles_[i]->position;
+        }
+
+        viewer.data().add_points(particlesPos,Eigen::RowVector3d(0.0, 0.0, 1.0));
         
         for (unsigned i=0;i<tankE.rows(); ++i)
             viewer.data().add_edges
@@ -47,7 +55,7 @@ public:
 
 private:
     void loadScene();
-    void computeForces(Eigen::VectorXd &Fc, Eigen::VectorXd &Ftheta);    
+    void computeForces(Eigen::VectorXd &F);    
 
     std::mutex launchMutex_;
     bool launch_;
@@ -61,7 +69,6 @@ private:
     std::vector<RigidBodyTemplate *> templates_;
     std::vector<RigidBodyInstance *> bodies_;
 
-    RigidBodyTemplate *sphereTemplate_;
     RigidBodyTemplate *birdTemplate_;
 
     Eigen::MatrixXd renderQ;

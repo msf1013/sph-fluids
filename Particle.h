@@ -12,6 +12,7 @@ public:
     ~Particle();
 
     Eigen::Vector3d position;
+    Eigen::Vector3d prev_position;
     Eigen::Vector3d velocity;
 
     double mass;
