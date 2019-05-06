@@ -206,19 +206,44 @@ void FluidsHook::loadScene()
         delete p;
     particles_.clear();
 
-    double width = 2.0, height = 3.0, depth = 4.0;
+    double width = 2.0, height = 1.0, depth = 1.0;
     int num_w = 3, num_h = 3, num_d = 3;
 
     for (int i = 0; i < num_w; i ++) {
-        double x = -width/2.0 + i * width/num_w;
+        double x = -width/2.0 + i * width/(num_w - 1.0);
         for (int j = 0; j < num_h; j ++) {
-            double y = -height/2.0 + j * height/num_h;
+            double y = -height/2.0 + j * height/(num_h - 1.0) + 1.0;
             for (int k = 0; k < num_d; k ++) {
-                double z = -depth/2.0 + k * depth/num_d;
+                double z = -depth/2.0 + k * depth/(num_d - 1.0);
                 particles_.push_back(new Particle(Eigen::Vector3d(x, y, z), Eigen::Vector3d(0.0, 0.0, 0.0), 1.0));
             }
         }
     }
+
+    tankV.resize(8,3);
+    tankV << -2.0, -1.0, -1.0,
+             -2.0, -1.0,  1.0,
+              2.0, -1.0, -1.0,
+              2.0, -1.0,  1.0,
+             -2.0,  1.0, -1.0,
+             -2.0,  1.0,  1.0,
+              2.0,  1.0, -1.0,
+              2.0,  1.0,  1.0;
+
+    tankE.resize(12,2);
+    tankE <<
+          0, 1,
+          0, 2,
+          1, 3,
+          2, 3,
+          1, 5,
+          3, 7,
+          2, 6,
+          0, 4,
+          4, 6,
+          4, 5,
+          5, 7,
+          6, 7;
 
     sphereTemplate_ = new RigidBodyTemplate("../meshes/sphere.obj", 0.1);
 }

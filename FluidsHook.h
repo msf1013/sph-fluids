@@ -33,6 +33,16 @@ public:
     {
         viewer.data().clear();
         viewer.data().set_mesh(renderQ, renderF);
+
+        viewer.data().add_points(tankV,Eigen::RowVector3d(1.0, 0.0, 0.0));
+        
+        for (unsigned i=0;i<tankE.rows(); ++i)
+            viewer.data().add_edges
+            (
+              tankV.row(tankE(i,0)),
+              tankV.row(tankE(i,1)),
+              Eigen::RowVector3d(1,0,0)
+        );
     }
 
 private:
@@ -58,6 +68,8 @@ private:
     Eigen::MatrixXi renderF;
 
     std::vector<Particle *> particles_;
+    Eigen::MatrixXd tankV;
+    Eigen::MatrixXi tankE;
 
     double viscosityKernelLaplacian(double distance, double h);
     double pressureKernelGradient(double distance, double h);
