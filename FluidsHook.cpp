@@ -167,14 +167,20 @@ bool FluidsHook::mouseClicked(igl::opengl::glfw::Viewer &viewer, Eigen::Vector3d
 
 bool FluidsHook::simulateOneStep()
 {   
+    // Implicit Euler
     time_ += params_.timeStep;
-    
+
+    // Calculate position_(i+1)
+    for (int i = 0; i < particles_.size(); i ++) {
+        particles_[i]->prev_position = particles_[i]->position;
+        particles_[i]->position += params_.timeStep*particles_[i]->velocity;
+    }
+
+    // Calculate velocity_(i+1) with position_(i+1)
     Eigen::VectorXd force(3 * particles_.size());
     computeForces(force);
 
     for (int i = 0; i < particles_.size(); i ++) {
-        particles_[i]->prev_position = particles_[i]->position;
-        particles_[i]->position += params_.timeStep*particles_[i]->velocity;
         particles_[i]->velocity += params_.timeStep*force.segment<3>(3*i);
     }
 
