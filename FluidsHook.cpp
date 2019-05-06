@@ -6,6 +6,7 @@
 #include "CollisionDetection.h"
 #include "Particle.h"
 #include <Eigen/Geometry>
+#include <stdlib.h>
 
 using namespace Eigen;
 
@@ -96,6 +97,52 @@ void FluidsHook::computeForces(VectorXd &F)
             F[3*i + 1] += basestiffness*dist - basedrag*dist*vel;
         }
     }
+
+    // Wall forces
+    for(int i = 0; i < particles_.size(); i ++)
+    {
+        if(particles_[i]->position[0] < -2.0)
+        {
+            double vel = (particles_[i]->position[0] - particles_[i]->prev_position[0])/params_.timeStep;
+            double dist = -2.0 - particles_[i]->position[0];
+
+            F[3*i] += basestiffness*dist - basedrag*dist*vel;
+        }
+        if(particles_[i]->position[0] > 2.0)
+        {
+            double vel = (particles_[i]->position[0] - particles_[i]->prev_position[0])/params_.timeStep;
+            double dist = particles_[i]->position[0] - 2.0;
+
+            F[3*i] += basedrag*dist*vel - basestiffness*dist;
+        }
+        if(particles_[i]->position[2] < -1.0)
+        {
+            double vel = (particles_[i]->position[2] - particles_[i]->prev_position[2])/params_.timeStep;
+            double dist = -1.0 - particles_[i]->position[2];
+
+            F[3*i + 2] += basestiffness*dist - basedrag*dist*vel;
+        }
+        if(particles_[i]->position[2] > 1.0)
+        {
+            double vel = (particles_[i]->position[2] - particles_[i]->prev_position[2])/params_.timeStep;
+            double dist = particles_[i]->position[2] - 1.0;
+
+            F[3*i + 2] +=  basedrag*dist*vel - basestiffness*dist;
+        }
+    }
+
+    // Collision forces between particles
+    /*for(int i = 0; i < particles_.size(); i ++)
+    {
+        for(int j = i + 1; j < particles_.size(); j ++)
+        {
+            if ((particles_[i]->position - particles_[j]->position).norm() < 0.01) {
+                F.segment<3>(3*i) += (particles_[i]->velocity - particles_[j]->velocity) / params_.timeStep;
+                F.segment<3>(3*j) += (particles_[j]->velocity - particles_[i]->velocity) / params_.timeStep;
+            }
+        }
+    }*/
+
 }
 
 bool FluidsHook::mouseClicked(igl::opengl::glfw::Viewer &viewer, Eigen::Vector3d dir, int button)
@@ -141,7 +188,7 @@ void FluidsHook::loadScene()
     particles_.clear();
 
     double width = 2.0, height = 1.0, depth = 1.0;
-    int num_w = 5, num_h = 5, num_d = 5;
+    int num_w = 3, num_h = 3, num_d = 3;
 
     for (int i = 0; i < num_w; i ++) {
         double x = -width/2.0 + i * width/(num_w - 1.0);
@@ -149,7 +196,7 @@ void FluidsHook::loadScene()
             double y = -height/2.0 + j * height/(num_h - 1.0) + 1.0;
             for (int k = 0; k < num_d; k ++) {
                 double z = -depth/2.0 + k * depth/(num_d - 1.0);
-                particles_.push_back(new Particle(Eigen::Vector3d(x, y, z), Eigen::Vector3d(0.0, 0.0, 0.0), 1.0));
+                particles_.push_back(new Particle(Eigen::Vector3d(x, y, z), Eigen::Vector3d(((double) rand() / (RAND_MAX)), ((double) rand() / (RAND_MAX)), ((double) rand() / (RAND_MAX))) * 2.0 - Eigen::Vector3d(1,1,1), 1.0));
             }
         }
     }
