@@ -89,10 +89,10 @@ void FluidsHook::computeForces(VectorXd &F)
 
     for(int i = 0; i < particles_.size(); i ++)
     {
-        if(particles_[i]->position[1] < -1.0)
+        if(particles_[i]->position[1] < -t_height/2.0)
         {
             double vel = (particles_[i]->position[1] - particles_[i]->prev_position[1])/params_.timeStep;
-            double dist = -1.0 - particles_[i]->position[1];
+            double dist = -t_height/2.0 - particles_[i]->position[1];
 
             F[3*i + 1] += basestiffness*dist - basedrag*dist*vel;
         }
@@ -101,31 +101,31 @@ void FluidsHook::computeForces(VectorXd &F)
     // Wall forces
     for(int i = 0; i < particles_.size(); i ++)
     {
-        if(particles_[i]->position[0] < -2.0)
+        if(particles_[i]->position[0] < -t_width/2.0)
         {
             double vel = (particles_[i]->position[0] - particles_[i]->prev_position[0])/params_.timeStep;
-            double dist = -2.0 - particles_[i]->position[0];
+            double dist = -t_width/2.0 - particles_[i]->position[0];
 
             F[3*i] += basestiffness*dist - basedrag*dist*vel;
         }
-        if(particles_[i]->position[0] > 2.0)
+        if(particles_[i]->position[0] > t_width/2.0)
         {
             double vel = (particles_[i]->position[0] - particles_[i]->prev_position[0])/params_.timeStep;
-            double dist = particles_[i]->position[0] - 2.0;
+            double dist = particles_[i]->position[0] - t_width/2.0;
 
             F[3*i] += basedrag*dist*vel - basestiffness*dist;
         }
-        if(particles_[i]->position[2] < -1.0)
+        if(particles_[i]->position[2] < -t_depth/2.0)
         {
             double vel = (particles_[i]->position[2] - particles_[i]->prev_position[2])/params_.timeStep;
-            double dist = -1.0 - particles_[i]->position[2];
+            double dist = -t_depth/2.0 - particles_[i]->position[2];
 
             F[3*i + 2] += basestiffness*dist - basedrag*dist*vel;
         }
-        if(particles_[i]->position[2] > 1.0)
+        if(particles_[i]->position[2] > t_depth/2.0)
         {
             double vel = (particles_[i]->position[2] - particles_[i]->prev_position[2])/params_.timeStep;
-            double dist = particles_[i]->position[2] - 1.0;
+            double dist = particles_[i]->position[2] - t_depth/2.0;
 
             F[3*i + 2] +=  basedrag*dist*vel - basestiffness*dist;
         }
@@ -194,7 +194,7 @@ void FluidsHook::loadScene()
     particles_.clear();
 
     double width = 2.0, height = 1.0, depth = 1.0;
-    int num_w = 3, num_h = 3, num_d = 3;
+    int num_w = 10, num_h = 10, num_d = 10;
 
     for (int i = 0; i < num_w; i ++) {
         double x = -width/2.0 + i * width/(num_w - 1.0);
@@ -208,14 +208,14 @@ void FluidsHook::loadScene()
     }
 
     tankV.resize(8,3);
-    tankV << -2.0, -1.0, -1.0,
-             -2.0, -1.0,  1.0,
-              2.0, -1.0, -1.0,
-              2.0, -1.0,  1.0,
-             -2.0,  1.0, -1.0,
-             -2.0,  1.0,  1.0,
-              2.0,  1.0, -1.0,
-              2.0,  1.0,  1.0;
+    tankV << -t_width/2.0, -t_height/2.0, -t_depth/2.0,
+             -t_width/2.0, -t_height/2.0,  t_depth/2.0,
+              t_width/2.0, -t_height/2.0, -t_depth/2.0,
+              t_width/2.0, -t_height/2.0,  t_depth/2.0,
+             -t_width/2.0,  t_height/2.0, -t_depth/2.0,
+             -t_width/2.0,  t_height/2.0,  t_depth/2.0,
+              t_width/2.0,  t_height/2.0, -t_depth/2.0,
+              t_width/2.0,  t_height/2.0,  t_depth/2.0;
 
     tankE.resize(12,2);
     tankE <<

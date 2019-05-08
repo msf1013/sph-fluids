@@ -78,6 +78,8 @@ private:
     Eigen::MatrixXd tankV;
     Eigen::MatrixXi tankE;
 
+    double t_width=4.0, t_height=2.0, t_depth=2.0;
+
     double viscosityKernelLaplacian(double distance, double h);
     double pressureKernelGradient(double distance, double h);
 };
