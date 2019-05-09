@@ -21,7 +21,9 @@ public:
 
     virtual void initSimulation();
 
-    virtual bool mouseClicked(igl::opengl::glfw::Viewer &viewer, Eigen::Vector3d dir, int button);
+    virtual bool mouseClicked(igl::opengl::glfw::Viewer &viewer, Eigen::Vector3d dir);
+
+    virtual bool mouseReleased(igl::opengl::glfw::Viewer &viewer, Eigen::Vector3d dir);
 
     virtual void updateRenderGeometry();
 
@@ -57,8 +59,7 @@ private:
     void loadScene();
     void computeForces(Eigen::VectorXd &F);    
 
-    std::mutex launchMutex_;
-    bool launch_;
+    std::mutex applyForceMutex_;
     Eigen::Vector3d launchPos_;
     Eigen::Vector3d launchDir_;
 
@@ -79,6 +80,11 @@ private:
     Eigen::MatrixXi tankE;
 
     double t_width=4.0, t_height=2.0, t_depth=2.0;
+
+    bool pressed = false;
+    bool applyForce = false;
+    Eigen::Vector3d startV;
+    Eigen::Vector3d endV;
 
     double viscosityKernelLaplacian(double distance, double h);
     double pressureKernelGradient(double distance, double h);

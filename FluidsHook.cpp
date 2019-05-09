@@ -14,8 +14,6 @@ using namespace Eigen;
 
 FluidsHook::FluidsHook() : PhysicsHook(), sceneFile_("box.scn")
 {
-    birdTemplate_ = NULL;
-    launch_ = false;
 }
 
 void FluidsHook::drawGUI(igl::opengl::glfw::imgui::ImGuiMenu &menu)
@@ -55,21 +53,19 @@ void FluidsHook::initSimulation()
 
 void FluidsHook::tick()
 {    
-    launchMutex_.lock();
+    applyForceMutex_.lock();
 
-    double launchVel = 100.0;
-
-    if (launch_)
+    if (applyForce)
     {
-        Eigen::Vector3d cvel(0, 0, 0);
-        Eigen::Vector3d w(0, 0, 0);
-        RigidBodyInstance *rbi = new RigidBodyInstance(*birdTemplate_, launchPos_, cvel, launchVel * launchDir_, w, 1.0);
-        bodies_.push_back(rbi);
-    
-        launch_ = false;
+        std::cout << "Start vector\n";
+        std::cout << startV;
+        std::cout << "End vector\n";
+        std::cout << endV;
+
+        applyForce = false;
     }
 
-    launchMutex_.unlock();
+    applyForceMutex_.unlock();
 }
 
 void FluidsHook::computeForces(VectorXd &F)
@@ -145,23 +141,30 @@ void FluidsHook::computeForces(VectorXd &F)
 
 }
 
-bool FluidsHook::mouseClicked(igl::opengl::glfw::Viewer &viewer, Eigen::Vector3d dir, int button)
+bool FluidsHook::mouseClicked(igl::opengl::glfw::Viewer &viewer, Eigen::Vector3d dir)
 {
-    if (button != 2)
-        return false;
+    if (pressed) true;
 
-    launchMutex_.lock();
-    launch_ = true;
-    Eigen::Matrix4f view = viewer.core.view;
-    Eigen::Vector4f eye = view.inverse() * Eigen::Vector4f(0, 0, 0, 1.0f);
-    for (int i = 0; i < 3; i++)
-    {
+    std::cout << "CLICKED\n";
 
-        launchPos_[i] = eye[i] + dir[i];
-        launchDir_[i] = dir[i];
-    }
+    pressed = true;
+    startV = dir;
 
-    launchMutex_.unlock();
+    return true;
+}
+
+bool FluidsHook::mouseReleased(igl::opengl::glfw::Viewer &viewer, Eigen::Vector3d dir)
+{
+    pressed = false;
+
+    applyForceMutex_.lock();
+
+    std::cout << "RELEASED\n";
+    applyForce = true;
+    endV = dir;
+
+    applyForceMutex_.unlock();
+    
     return true;
 }
 

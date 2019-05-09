@@ -42,8 +42,11 @@ bool mouseWheel(igl::opengl::glfw::Viewer& viewer, float delta)
     return true;
 }
 
-bool mouseCallback(igl::opengl::glfw::Viewer& viewer, int button, int modifier)
+bool mouseClickedCallback(igl::opengl::glfw::Viewer& viewer, int button, int modifier)
 {
+    if (button != 2)
+        return false;
+
     Eigen::Vector3f pos(viewer.down_mouse_x, viewer.core.viewport[3] - viewer.down_mouse_y, 1);
     Eigen::Matrix4f model = viewer.core.view;
     Eigen::Vector3f unproj = igl::unproject(pos, model, viewer.core.proj, viewer.core.viewport);
@@ -52,7 +55,23 @@ bool mouseCallback(igl::opengl::glfw::Viewer& viewer, int button, int modifier)
     for (int i = 0; i < 3; i++)
         dir[i] = unproj[i] - eye[i];
     dir.normalize();
-    return hook->mouseClicked(viewer, dir, button);
+    return hook->mouseClicked(viewer, dir);
+}
+
+bool mouseReleasedCallback(igl::opengl::glfw::Viewer& viewer, int button, int modifier)
+{
+    if (button != 2)
+        return false;
+
+    Eigen::Vector3f pos(viewer.down_mouse_x, viewer.core.viewport[3] - viewer.down_mouse_y, 1);
+    Eigen::Matrix4f model = viewer.core.view;
+    Eigen::Vector3f unproj = igl::unproject(pos, model, viewer.core.proj, viewer.core.viewport);
+    Eigen::Vector4f eye = viewer.core.view.inverse() * Eigen::Vector4f(0.0, 0.0, 0.0, 1.0);
+    Eigen::Vector3d dir;
+    for (int i = 0; i < 3; i++)
+        dir[i] = unproj[i] - eye[i];
+    dir.normalize();
+    return hook->mouseReleased(viewer, dir);
 }
 
 bool keyCallback(igl::opengl::glfw::Viewer &viewer, unsigned int key, int modifiers)
@@ -114,7 +133,8 @@ int main(int argc, char *argv[])
 
     viewer.callback_key_pressed = keyCallback;
     viewer.callback_pre_draw = drawCallback;
-    viewer.callback_mouse_down = mouseCallback;
+    viewer.callback_mouse_down = mouseClickedCallback;
+    viewer.callback_mouse_up = mouseReleasedCallback;
     viewer.callback_mouse_scroll = mouseWheel;
 
     igl::opengl::glfw::imgui::ImGuiMenu menu;
