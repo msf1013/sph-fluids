@@ -7,12 +7,14 @@
 #include "Particle.h"
 #include <Eigen/Geometry>
 #include <stdlib.h>
+#include <cmath>
 
 using namespace Eigen;
 using Eigen::Vector3d;
 using std::vector;
 
 #define PI 3.14159265358979323846
+#define GAS_CONSTANT 8.3144598
 
 FluidsHook::FluidsHook() : PhysicsHook(), sceneFile_("box.scn")
 {
@@ -76,10 +78,26 @@ void FluidsHook::computeAcc(vector<Vector3d> &Acc)
 
     computeGravityAcc(Acc);
     computeFloorWallAcc(Acc);
-    computePressureAcc(Acc);
-    computeViscosityAcc(Acc);
-    computeSurfaceTensionAcc(Acc);
 
+    vector<double> Density(particles_.size());
+    computeDensity(Density);
+
+    computePressureAcc(Density, Acc);
+    computeViscosityAcc(Density, Acc);
+    computeSurfaceTensionAcc(Density, Acc);
+
+}
+
+void FluidsHook::computeDensity(vector<double> &Density) {
+    Density.resize(particles_.size());
+    for (int i = 0; i < particles_.size(); ++i) {
+        double density = 0;
+        for (int j = 0; j < particles_.size(); ++j) {
+            density += mass * kernelPoly6( 
+                (particles_[i]->position - particles_[j]->position).norm(), smoothingLength );
+        }
+        Density[i] = density;
+    }
 }
 
 
@@ -143,16 +161,66 @@ void FluidsHook::computeFloorWallAcc(vector<Vector3d> &Acc) {
     }
 }
 
-void FluidsHook::computePressureAcc(vector<Vector3d> &Acc) {
-    
+void FluidsHook::computePressureAcc(const vector<double> &Density, vector<Vector3d> &Acc) {
+
+    // Computing Pressure.
+    vector<double> Pressure(particles_.size());
+    for (int i = 0; i < particles_.size(); ++i) {
+        Pressure[i] = GAS_CONSTANT * (Density[i] - restDensity);
+    }
+
+    for (int i = 0; i < particles_.size(); ++i) {
+        Vector3d force = Vector3d::Zero();
+        for (int j = 0; j < particles_.size(); ++j) {
+            force += -mass * ( (Pressure[i] + Pressure[j]) / (2 * Density[j]) ) *
+                kernelSpikyGradient(particles_[i]->position - particles_[j]->position, smoothingLength);
+        }
+        Acc[i] += force / Density[i];
+    }
 }
 
-void FluidsHook::computeViscosityAcc(vector<Vector3d> &Acc) {
+void FluidsHook::computeViscosityAcc(const vector<double> &Density, vector<Vector3d> &Acc) {
+
+    for (int i = 0; i < particles_.size(); ++i) {
+        Vector3d force = Vector3d::Zero();
+        for (int j = 0; j < particles_.size(); ++j) {
+            force += mass * ( (particles_[j]->velocity - particles_[i]->velocity) /
+                Density[j] ) * kernelViscosityLaplacian( (particles_[i]->position 
+                    - particles_[j]->position).norm(), smoothingLength );
+        }
+        Acc[i] += force / Density[i];
+    }
+}
+
+void FluidsHook::computeSurfaceTensionAcc(const vector<double> &Density, vector<Vector3d> &Acc) {
 
 }
 
-void FluidsHook::computeSurfaceTensionAcc(vector<Vector3d> &Acc) {
 
+double FluidsHook::kernelPoly6(double r, double h) {
+    assert (r >= 0);
+    if (r <= h) {
+        return ( 315.0 / (64 * PI * pow(h,9)) ) * pow(pow(h,2) - pow(r,2), 3);
+    }
+    return 0;
+}
+
+Vector3d FluidsHook::kernelSpikyGradient(Vector3d R, double h) {
+    if (R.norm() == 0) return Vector3d::Zero();
+
+    if (R.norm() <= h) {
+        return ( -45.0 / (PI * pow(h,6)) ) * pow(h - R.norm(), 2) * R / R.norm();
+    }
+
+    return Vector3d::Zero();
+}
+
+double FluidsHook::kernelViscosityLaplacian(double r, double h) {
+    assert (r >= 0);
+    if (r <= h) {
+        return ( 45.0 / (PI * pow(h,6)) ) * (h - r);
+    }
+    return 0;
 }
 
 bool FluidsHook::mouseClicked(igl::opengl::glfw::Viewer &viewer, Eigen::Vector3d dir)
@@ -212,7 +280,7 @@ void FluidsHook::loadScene()
     particles_.clear();
 
     double width = 2.0, height = 1.0, depth = 1.0;
-    int num_w = 10, num_h = 10, num_d = 10;
+    int num_w = 8, num_h = 8, num_d = 8;
 
     for (int i = 0; i < num_w; i ++) {
         double x = -width/2.0 + i * width/(num_w - 1.0);
@@ -249,12 +317,4 @@ void FluidsHook::loadScene()
           4, 5,
           5, 7,
           6, 7;
-}
-
-double FluidsHook::viscosityKernelLaplacian(double distance, double h) {
-    return 45.0 / (PI * h * h * h * h * h * h) * (h - distance);
-}
-
-double FluidsHook::pressureKernelGradient(double distance, double h) {
-    return -90.0 * (h - distance) * (h - distance) * (h - distance) / (PI *h*h*h*h*h*h*h);
 }

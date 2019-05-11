@@ -61,12 +61,6 @@ public:
 
 private:
     void loadScene();
-    void computeAcc(vector<Vector3d> &Acc);
-    void computeGravityAcc(vector<Vector3d> &Acc);
-    void computeFloorWallAcc(vector<Vector3d> &Acc);
-    void computePressureAcc(vector<Vector3d> &Acc);
-    void computeViscosityAcc(vector<Vector3d> &Acc);
-    void computeSurfaceTensionAcc(vector<Vector3d> &Acc);
 
     std::mutex applyForceMutex_;
     Eigen::Vector3d launchPos_;
@@ -88,13 +82,30 @@ private:
     Eigen::MatrixXd tankV;
     Eigen::MatrixXi tankE;
 
-    double t_width=4.0, t_height=2.0, t_depth=2.0;
+    double t_width=3.0, t_height=1.5, t_depth=1.5;
 
     bool pressed = false;
     bool applyForce = false;
     Eigen::Vector3d startV;
     Eigen::Vector3d endV;
 
-    double viscosityKernelLaplacian(double distance, double h);
-    double pressureKernelGradient(double distance, double h);
+
+    void computeAcc(vector<Vector3d> &Acc);
+    void computeGravityAcc(vector<Vector3d> &Acc);
+    void computeFloorWallAcc(vector<Vector3d> &Acc);
+    void computePressureAcc(const vector<double> &Density, vector<Vector3d> &Acc);
+    void computeViscosityAcc(const vector<double> &Density, vector<Vector3d> &Acc);
+    void computeSurfaceTensionAcc(const vector<double> &Density, vector<Vector3d> &Acc);
+
+    void computeDensity(vector<double> &Density);
+
+    double kernelPoly6(double r, double h);
+    Vector3d kernelSpikyGradient(Vector3d R, double h);
+    double kernelViscosityLaplacian(double r, double h);
+
+    double mass = 1;
+    double smoothingLength = 0.2;
+    double restDensity = 1;
+    double CoV = 0.1;
+
 };
