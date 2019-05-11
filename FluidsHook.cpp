@@ -59,11 +59,7 @@ void FluidsHook::tick()
 
     if (applyForce)
     {
-        std::cout << "Start vector\n";
-        std::cout << startV;
-        std::cout << "End vector\n";
-        std::cout << endV;
-
+        applyExternalForce = true;
         applyForce = false;
     }
 
@@ -74,6 +70,10 @@ void FluidsHook::computeAcc(vector<Vector3d> &Acc)
 {
     for (auto &acc : Acc) acc.setZero();
 
+    if (applyExternalForce) {
+        computeExternalAcc(Acc);
+    }
+
     computeGravityAcc(Acc);
     computeFloorWallAcc(Acc);
     computePressureAcc(Acc);
@@ -82,6 +82,39 @@ void FluidsHook::computeAcc(vector<Vector3d> &Acc)
 
 }
 
+void FluidsHook::computeExternalAcc(vector<Vector3d> &Acc)
+{
+    Eigen::Vector3d force = forceAlongPlane(startV, endV) * 3200.0;
+    for (int i = 0; i < particles_.size(); i ++) {
+        double distance = pointToPlaneDistance(particles_[i]->position, startV, endV); 
+
+        if (distance < 0.1) {
+            Acc[i] += force * (1.0 - distance) * (1.0 - distance);
+        }
+    }
+    applyExternalForce = false;
+}
+
+Eigen::Vector3d FluidsHook::forceAlongPlane(Eigen::Vector3d startV, Eigen::Vector3d endV)
+{
+    Eigen::Vector3d startU = startV / startV.norm();
+    Eigen::Vector3d endU = endV / endV.norm();
+
+    Eigen::Vector3d force = endU - startU;
+
+    return force / force.norm();
+}
+
+double FluidsHook::pointToPlaneDistance(Eigen::Vector3d p, Eigen::Vector3d v1, Eigen::Vector3d v2) {
+    Eigen::Vector3d n = v1.cross(v2);
+
+    double a = n[0],
+           b = n[1],
+           c = n[2],
+           d = -n[0]*eye_[0] -n[1]*eye_[1] -n[2]*eye_[2];
+
+    return abs(a*p[0] + b*p[1] + c*p[2] + d) / sqrt(a*a + b*b + c*c);
+}
 
 void FluidsHook::computeGravityAcc(vector<Vector3d> &Acc) {
     // TODO. Where is rho?
@@ -159,10 +192,17 @@ bool FluidsHook::mouseClicked(igl::opengl::glfw::Viewer &viewer, Eigen::Vector3d
 {
     if (pressed) true;
 
-    std::cout << "CLICKED\n";
-
     pressed = true;
-    startV = dir;
+
+    // Calculate startV
+    Eigen::Matrix4f view = viewer.core.view;
+    Eigen::Vector4f eye = view.inverse() * Eigen::Vector4f(0, 0, 0, 1.0f);
+    for (int i = 0; i < 3; i++)
+    {
+
+        eye_[i] = eye[i] + dir[i];
+        startV[i] = dir[i];
+    }
 
     return true;
 }
@@ -173,9 +213,16 @@ bool FluidsHook::mouseReleased(igl::opengl::glfw::Viewer &viewer, Eigen::Vector3
 
     applyForceMutex_.lock();
 
-    std::cout << "RELEASED\n";
     applyForce = true;
-    endV = dir;
+    
+    // Calculate endV
+    Eigen::Matrix4f view = viewer.core.view;
+    Eigen::Vector4f eye = view.inverse() * Eigen::Vector4f(0, 0, 0, 1.0f);
+    for (int i = 0; i < 3; i++)
+    {
+
+        endV[i] = dir[i];
+    }
 
     applyForceMutex_.unlock();
     

@@ -66,7 +66,8 @@ private:
     void computeFloorWallAcc(vector<Vector3d> &Acc);
     void computePressureAcc(vector<Vector3d> &Acc);
     void computeViscosityAcc(vector<Vector3d> &Acc);
-    void computeSurfaceTensionAcc(vector<Vector3d> &Acc);
+    void computeSurfaceTensionAcc(vector<Vector3d> &Acc);;
+    void computeExternalAcc(vector<Vector3d> &Acc);
 
     std::mutex applyForceMutex_;
     Eigen::Vector3d launchPos_;
@@ -88,12 +89,17 @@ private:
     Eigen::MatrixXd tankV;
     Eigen::MatrixXi tankE;
 
-    double t_width=4.0, t_height=2.0, t_depth=2.0;
+    double t_width=3.0, t_height=1.5, t_depth=1.5;
 
     bool pressed = false;
     bool applyForce = false;
+    bool applyExternalForce = false;
     Eigen::Vector3d startV;
     Eigen::Vector3d endV;
+    Eigen::Vector3d eye_;
+
+    Eigen::Vector3d forceAlongPlane(Eigen::Vector3d startV, Eigen::Vector3d endV);
+    double pointToPlaneDistance(Eigen::Vector3d p, Eigen::Vector3d v1, Eigen::Vector3d v2);
 
     double viscosityKernelLaplacian(double distance, double h);
     double pressureKernelGradient(double distance, double h);
