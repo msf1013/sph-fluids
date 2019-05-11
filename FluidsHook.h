@@ -12,9 +12,13 @@
 class RigidBodyTemplate;
 class RigidBodyInstance;
 
+using Eigen::Vector3d;
+using std::vector;
+
 class FluidsHook : public PhysicsHook
 {
 public:
+
     FluidsHook();    
 
     virtual void drawGUI(igl::opengl::glfw::imgui::ImGuiMenu &menu);
@@ -57,7 +61,12 @@ public:
 
 private:
     void loadScene();
-    void computeForces(Eigen::VectorXd &F);    
+    void computeAcc(vector<Vector3d> &Acc);
+    void computeGravityAcc(vector<Vector3d> &Acc);
+    void computeFloorWallAcc(vector<Vector3d> &Acc);
+    void computePressureAcc(vector<Vector3d> &Acc);
+    void computeViscosityAcc(vector<Vector3d> &Acc);
+    void computeSurfaceTensionAcc(vector<Vector3d> &Acc);
 
     std::mutex applyForceMutex_;
     Eigen::Vector3d launchPos_;

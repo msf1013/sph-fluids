@@ -9,6 +9,8 @@
 #include <stdlib.h>
 
 using namespace Eigen;
+using Eigen::Vector3d;
+using std::vector;
 
 #define PI 3.14159265358979323846
 
@@ -68,18 +70,31 @@ void FluidsHook::tick()
     applyForceMutex_.unlock();
 }
 
-void FluidsHook::computeForces(VectorXd &F)
+void FluidsHook::computeAcc(vector<Vector3d> &Acc)
 {
-    F.resize(3*particles_.size());
-    F.setZero();
+    for (auto &acc : Acc) acc.setZero();
 
-    // Gravity force
+    computeGravityAcc(Acc);
+    computeFloorWallAcc(Acc);
+    computePressureAcc(Acc);
+    computeViscosityAcc(Acc);
+    computeSurfaceTensionAcc(Acc);
+
+}
+
+
+void FluidsHook::computeGravityAcc(vector<Vector3d> &Acc) {
+    // TODO. Where is rho?
     for(int i = 0; i < particles_.size(); i ++)
     {
-        F[3*i + 1] -= params_.gravityG;
+        Acc[i][1] -= params_.gravityG;
     }
-    
+}
+
+void FluidsHook::computeFloorWallAcc(vector<Vector3d> &Acc) {
+
     // Floor force
+    // TODO. Should this be in params_?
     double basestiffness = 10000;
     double basedrag = 1000.0;
 
@@ -90,7 +105,7 @@ void FluidsHook::computeForces(VectorXd &F)
             double vel = (particles_[i]->position[1] - particles_[i]->prev_position[1])/params_.timeStep;
             double dist = -t_height/2.0 - particles_[i]->position[1];
 
-            F[3*i + 1] += basestiffness*dist - basedrag*dist*vel;
+            Acc[i][1] += basestiffness*dist - basedrag*dist*vel;
         }
     }
 
@@ -102,42 +117,41 @@ void FluidsHook::computeForces(VectorXd &F)
             double vel = (particles_[i]->position[0] - particles_[i]->prev_position[0])/params_.timeStep;
             double dist = -t_width/2.0 - particles_[i]->position[0];
 
-            F[3*i] += basestiffness*dist - basedrag*dist*vel;
+            Acc[i][0] += basestiffness*dist - basedrag*dist*vel;
         }
         if(particles_[i]->position[0] > t_width/2.0)
         {
             double vel = (particles_[i]->position[0] - particles_[i]->prev_position[0])/params_.timeStep;
             double dist = particles_[i]->position[0] - t_width/2.0;
 
-            F[3*i] += basedrag*dist*vel - basestiffness*dist;
+            Acc[i][0] += basedrag*dist*vel - basestiffness*dist;
         }
         if(particles_[i]->position[2] < -t_depth/2.0)
         {
             double vel = (particles_[i]->position[2] - particles_[i]->prev_position[2])/params_.timeStep;
             double dist = -t_depth/2.0 - particles_[i]->position[2];
 
-            F[3*i + 2] += basestiffness*dist - basedrag*dist*vel;
+            Acc[i][2] += basestiffness*dist - basedrag*dist*vel;
         }
         if(particles_[i]->position[2] > t_depth/2.0)
         {
             double vel = (particles_[i]->position[2] - particles_[i]->prev_position[2])/params_.timeStep;
             double dist = particles_[i]->position[2] - t_depth/2.0;
 
-            F[3*i + 2] +=  basedrag*dist*vel - basestiffness*dist;
+            Acc[i][2] +=  basedrag*dist*vel - basestiffness*dist;
         }
     }
+}
 
-    // Collision forces between particles
-    /*for(int i = 0; i < particles_.size(); i ++)
-    {
-        for(int j = i + 1; j < particles_.size(); j ++)
-        {
-            if ((particles_[i]->position - particles_[j]->position).norm() < 0.01) {
-                F.segment<3>(3*i) += (particles_[i]->velocity - particles_[j]->velocity) / params_.timeStep;
-                F.segment<3>(3*j) += (particles_[j]->velocity - particles_[i]->velocity) / params_.timeStep;
-            }
-        }
-    }*/
+void FluidsHook::computePressureAcc(vector<Vector3d> &Acc) {
+    
+}
+
+void FluidsHook::computeViscosityAcc(vector<Vector3d> &Acc) {
+
+}
+
+void FluidsHook::computeSurfaceTensionAcc(vector<Vector3d> &Acc) {
 
 }
 
@@ -179,12 +193,13 @@ bool FluidsHook::simulateOneStep()
         particles_[i]->position += params_.timeStep*particles_[i]->velocity;
     }
 
+    // TODO. This is not useful.. making 3*size eigen, rather use vector of 3D eigen.
     // Calculate velocity_(i+1) with position_(i+1)
-    Eigen::VectorXd force(3 * particles_.size());
-    computeForces(force);
+    vector<Vector3d> Acc(particles_.size());
+    computeAcc(Acc);
 
     for (int i = 0; i < particles_.size(); i ++) {
-        particles_[i]->velocity += params_.timeStep*force.segment<3>(3*i);
+        particles_[i]->velocity += params_.timeStep*Acc[i];
     }
 
     return false;
