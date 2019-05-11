@@ -188,12 +188,33 @@ void FluidsHook::computeViscosityAcc(const vector<double> &Density, vector<Vecto
                 Density[j] ) * kernelViscosityLaplacian( (particles_[i]->position 
                     - particles_[j]->position).norm(), smoothingLength );
         }
-        Acc[i] += force / Density[i];
+        Acc[i] += viscosityCoefficient * force / Density[i];
     }
 }
 
 void FluidsHook::computeSurfaceTensionAcc(const vector<double> &Density, vector<Vector3d> &Acc) {
 
+    vector<Vector3d> GradientColorField(particles_.size());
+
+    for (int i = 0; i < particles_.size(); ++i) {
+        Vector3d grad = Vector3d::Zero();
+        for (int j = 0; j < particles_.size(); ++j) {
+            grad += (mass / Density[j]) * kernelPoly6Gradient( particles_[i]->position 
+                    - particles_[j]->position, smoothingLength );
+        }
+        GradientColorField[i] = grad;
+    }
+
+    for (int i = 0; i < particles_.size(); ++i) {
+        double force = 0;
+        for (int j = 0; j < particles_.size(); ++j) {
+            if (GradientColorField[i].norm() > epsColorNormal) break;
+            force += kernelPoly6Laplacian( (particles_[i]->position 
+                    - particles_[j]->position).norm(), smoothingLength );
+        }
+        Acc[i] += -tensionCoefficient * force * GradientColorField[i] / (
+            Density[i] / GradientColorField[i].norm());
+    }
 }
 
 
@@ -201,6 +222,24 @@ double FluidsHook::kernelPoly6(double r, double h) {
     assert (r >= 0);
     if (r <= h) {
         return ( 315.0 / (64 * PI * pow(h,9)) ) * pow(pow(h,2) - pow(r,2), 3);
+    }
+    return 0;
+}
+
+Vector3d FluidsHook::kernelPoly6Gradient(Vector3d R, double h) {
+    
+    if (R.norm() <= h) {
+        return ( 315.0 / (64 * PI * pow(h,9)) ) * pow(pow(h,2) - pow(R.norm(),2), 2) *
+            3 * ( -2 * R);
+    }
+    return Vector3d::Zero();
+}
+
+double FluidsHook::kernelPoly6Laplacian(double r, double h) {
+    assert (r >= 0);
+    if (r <= h) {
+        return 6 * ( 315.0 / (64 * PI * pow(h,9)) ) * (pow(h,2) - pow(r,2)) *
+            ( 7 * pow(r,2) - 3 * pow(h,2) );
     }
     return 0;
 }

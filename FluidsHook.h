@@ -100,12 +100,16 @@ private:
     void computeDensity(vector<double> &Density);
 
     double kernelPoly6(double r, double h);
+    Vector3d kernelPoly6Gradient(Vector3d R, double h);
+    double kernelPoly6Laplacian(double r, double h);
     Vector3d kernelSpikyGradient(Vector3d R, double h);
     double kernelViscosityLaplacian(double r, double h);
 
     double mass = 1;
     double smoothingLength = 0.2;
     double restDensity = 1;
-    double CoV = 0.1;
+    double viscosityCoefficient = 0.1;
+    double tensionCoefficient = 1;
+    double epsColorNormal = 0.001;
 
 };
