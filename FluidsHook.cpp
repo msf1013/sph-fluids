@@ -130,6 +130,7 @@ void FluidsHook::computeFloorWallAcc(vector<Vector3d> &Acc) {
     // TODO. Should this be in params_?
     double basestiffness = 10000;
     double basedrag = 1000.0;
+    double basedragLat = 2000.0;
 
     for(int i = 0; i < particles_.size(); i ++)
     {
@@ -150,28 +151,35 @@ void FluidsHook::computeFloorWallAcc(vector<Vector3d> &Acc) {
             double vel = (particles_[i]->position[0] - particles_[i]->prev_position[0])/params_.timeStep;
             double dist = -t_width/2.0 - particles_[i]->position[0];
 
-            Acc[i][0] += basestiffness*dist - basedrag*dist*vel;
+            Acc[i][0] += basestiffness*dist - basedragLat*dist*vel;
         }
         if(particles_[i]->position[0] > t_width/2.0)
         {
             double vel = (particles_[i]->position[0] - particles_[i]->prev_position[0])/params_.timeStep;
             double dist = particles_[i]->position[0] - t_width/2.0;
 
-            Acc[i][0] += basedrag*dist*vel - basestiffness*dist;
+            Acc[i][0] += basedragLat*dist*vel - basestiffness*dist;
         }
         if(particles_[i]->position[2] < -t_depth/2.0)
         {
             double vel = (particles_[i]->position[2] - particles_[i]->prev_position[2])/params_.timeStep;
             double dist = -t_depth/2.0 - particles_[i]->position[2];
 
-            Acc[i][2] += basestiffness*dist - basedrag*dist*vel;
+            Acc[i][2] += basestiffness*dist - basedragLat*dist*vel;
         }
         if(particles_[i]->position[2] > t_depth/2.0)
         {
             double vel = (particles_[i]->position[2] - particles_[i]->prev_position[2])/params_.timeStep;
             double dist = particles_[i]->position[2] - t_depth/2.0;
 
-            Acc[i][2] +=  basedrag*dist*vel - basestiffness*dist;
+            Acc[i][2] +=  basedragLat*dist*vel - basestiffness*dist;
+        }
+        if(particles_[i]->position[1] > t_height/2.0)
+        {
+            double vel = (particles_[i]->position[1] - particles_[i]->prev_position[1])/params_.timeStep;
+            double dist = particles_[i]->position[1] - t_height/2.0;
+
+            Acc[i][1] += basedragLat*dist*vel - basestiffness*dist;
         }
     }
 }
@@ -264,7 +272,7 @@ void FluidsHook::loadScene()
     for (int i = 0; i < num_w; i ++) {
         double x = -width/2.0 + i * width/(num_w - 1.0);
         for (int j = 0; j < num_h; j ++) {
-            double y = -height/2.0 + j * height/(num_h - 1.0) + 1.0;
+            double y = -height/2.0 + j * height/(num_h - 1.0) + 0.5;
             for (int k = 0; k < num_d; k ++) {
                 double z = -depth/2.0 + k * depth/(num_d - 1.0);
                 particles_.push_back(new Particle(Eigen::Vector3d(x, y, z), Eigen::Vector3d(((double) rand() / (RAND_MAX)), ((double) rand() / (RAND_MAX)), ((double) rand() / (RAND_MAX))) * 2.0 - Eigen::Vector3d(1,1,1), 1.0));
@@ -273,14 +281,14 @@ void FluidsHook::loadScene()
     }
 
     tankV.resize(8,3);
-    tankV << -t_width/2.0, -t_height/2.0, -t_depth/2.0,
-             -t_width/2.0, -t_height/2.0,  t_depth/2.0,
-              t_width/2.0, -t_height/2.0, -t_depth/2.0,
-              t_width/2.0, -t_height/2.0,  t_depth/2.0,
-             -t_width/2.0,  t_height/2.0, -t_depth/2.0,
-             -t_width/2.0,  t_height/2.0,  t_depth/2.0,
-              t_width/2.0,  t_height/2.0, -t_depth/2.0,
-              t_width/2.0,  t_height/2.0,  t_depth/2.0;
+    tankV << -t_width/2.0-0.08, -t_height/2.0-0.08, -t_depth/2.0-0.08,
+             -t_width/2.0-0.08, -t_height/2.0-0.08,  t_depth/2.0+0.08,
+              t_width/2.0+0.08, -t_height/2.0-0.08, -t_depth/2.0-0.08,
+              t_width/2.0+0.08, -t_height/2.0-0.08,  t_depth/2.0+0.08,
+             -t_width/2.0-0.08,  t_height/2.0+0.08, -t_depth/2.0-0.08,
+             -t_width/2.0-0.08,  t_height/2.0+0.08,  t_depth/2.0+0.08,
+              t_width/2.0+0.08,  t_height/2.0+0.08, -t_depth/2.0-0.08,
+              t_width/2.0+0.08,  t_height/2.0+0.08,  t_depth/2.0+0.08;
 
     tankE.resize(12,2);
     tankE <<

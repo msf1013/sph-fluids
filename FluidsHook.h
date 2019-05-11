@@ -48,14 +48,14 @@ public:
             particlesPos.row(i) = particles_[i]->position;
         }
 
-        viewer.data().add_points(particlesPos,Eigen::RowVector3d(0.0, 0.0, 1.0));
+        viewer.data().add_points(particlesPos,Eigen::RowVector3d(35.0/255.0,137.0/255.0,218/255.0));
         
         for (unsigned i=0;i<tankE.rows(); ++i)
             viewer.data().add_edges
             (
               tankV.row(tankE(i,0)),
               tankV.row(tankE(i,1)),
-              Eigen::RowVector3d(1,0,0)
+              Eigen::RowVector3d(1,1,1)
         );
     }
 
@@ -89,7 +89,7 @@ private:
     Eigen::MatrixXd tankV;
     Eigen::MatrixXi tankE;
 
-    double t_width=3.0, t_height=1.5, t_depth=1.5;
+    double t_width=3.0, t_height=2.0, t_depth=1.5;
 
     bool pressed = false;
     bool applyForce = false;
