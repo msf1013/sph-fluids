@@ -63,7 +63,7 @@ bool mouseReleasedCallback(igl::opengl::glfw::Viewer& viewer, int button, int mo
     if (button != 2)
         return false;
 
-    Eigen::Vector3f pos(viewer.down_mouse_x, viewer.core.viewport[3] - viewer.down_mouse_y, 1);
+    Eigen::Vector3f pos(viewer.current_mouse_x, viewer.core.viewport[3] - viewer.current_mouse_y, 1);
     Eigen::Matrix4f model = viewer.core.view;
     Eigen::Vector3f unproj = igl::unproject(pos, model, viewer.core.proj, viewer.core.viewport);
     Eigen::Vector4f eye = viewer.core.view.inverse() * Eigen::Vector4f(0.0, 0.0, 0.0, 1.0);

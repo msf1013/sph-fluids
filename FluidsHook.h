@@ -48,14 +48,14 @@ public:
             particlesPos.row(i) = particles_[i]->position;
         }
 
-        viewer.data().add_points(particlesPos,Eigen::RowVector3d(0.0, 0.0, 1.0));
+        viewer.data().add_points(particlesPos,Eigen::RowVector3d(35.0/255.0,137.0/255.0,218/255.0));
         
         for (unsigned i=0;i<tankE.rows(); ++i)
             viewer.data().add_edges
             (
               tankV.row(tankE(i,0)),
               tankV.row(tankE(i,1)),
-              Eigen::RowVector3d(1,0,0)
+              Eigen::RowVector3d(1,1,1)
         );
     }
 
@@ -86,8 +86,13 @@ private:
 
     bool pressed = false;
     bool applyForce = false;
+    bool applyExternalForce = false;
     Eigen::Vector3d startV;
     Eigen::Vector3d endV;
+    Eigen::Vector3d eye_;
+
+    Eigen::Vector3d forceAlongPlane(Eigen::Vector3d startV, Eigen::Vector3d endV);
+    double pointToPlaneDistance(Eigen::Vector3d p, Eigen::Vector3d v1, Eigen::Vector3d v2);
 
 
     void computeAcc(vector<Vector3d> &Acc);

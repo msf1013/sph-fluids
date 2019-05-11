@@ -61,11 +61,7 @@ void FluidsHook::tick()
 
     if (applyForce)
     {
-        std::cout << "Start vector\n";
-        std::cout << startV;
-        std::cout << "End vector\n";
-        std::cout << endV;
-
+        applyExternalForce = true;
         applyForce = false;
     }
 
@@ -75,6 +71,10 @@ void FluidsHook::tick()
 void FluidsHook::computeAcc(vector<Vector3d> &Acc)
 {
     for (auto &acc : Acc) acc.setZero();
+
+    if (applyExternalForce) {
+        computeExternalAcc(Acc);
+    }
 
     computeGravityAcc(Acc);
     computeFloorWallAcc(Acc);
@@ -100,6 +100,39 @@ void FluidsHook::computeDensity(vector<double> &Density) {
     }
 }
 
+void FluidsHook::computeExternalAcc(vector<Vector3d> &Acc)
+{
+    Eigen::Vector3d force = forceAlongPlane(startV, endV) * 3200.0;
+    for (int i = 0; i < particles_.size(); i ++) {
+        double distance = pointToPlaneDistance(particles_[i]->position, startV, endV); 
+
+        if (distance < 0.1) {
+            Acc[i] += force * (1.0 - distance) * (1.0 - distance);
+        }
+    }
+    applyExternalForce = false;
+}
+
+Eigen::Vector3d FluidsHook::forceAlongPlane(Eigen::Vector3d startV, Eigen::Vector3d endV)
+{
+    Eigen::Vector3d startU = startV / startV.norm();
+    Eigen::Vector3d endU = endV / endV.norm();
+
+    Eigen::Vector3d force = endU - startU;
+
+    return force / force.norm();
+}
+
+double FluidsHook::pointToPlaneDistance(Eigen::Vector3d p, Eigen::Vector3d v1, Eigen::Vector3d v2) {
+    Eigen::Vector3d n = v1.cross(v2);
+
+    double a = n[0],
+           b = n[1],
+           c = n[2],
+           d = -n[0]*eye_[0] -n[1]*eye_[1] -n[2]*eye_[2];
+
+    return abs(a*p[0] + b*p[1] + c*p[2] + d) / sqrt(a*a + b*b + c*c);
+}
 
 void FluidsHook::computeGravityAcc(vector<Vector3d> &Acc) {
     // TODO. Where is rho?
@@ -115,6 +148,7 @@ void FluidsHook::computeFloorWallAcc(vector<Vector3d> &Acc) {
     // TODO. Should this be in params_?
     double basestiffness = 10000;
     double basedrag = 1000.0;
+    double basedragLat = 2000.0;
 
     for(int i = 0; i < particles_.size(); i ++)
     {
@@ -135,28 +169,35 @@ void FluidsHook::computeFloorWallAcc(vector<Vector3d> &Acc) {
             double vel = (particles_[i]->position[0] - particles_[i]->prev_position[0])/params_.timeStep;
             double dist = -t_width/2.0 - particles_[i]->position[0];
 
-            Acc[i][0] += basestiffness*dist - basedrag*dist*vel;
+            Acc[i][0] += basestiffness*dist - basedragLat*dist*vel;
         }
         if(particles_[i]->position[0] > t_width/2.0)
         {
             double vel = (particles_[i]->position[0] - particles_[i]->prev_position[0])/params_.timeStep;
             double dist = particles_[i]->position[0] - t_width/2.0;
 
-            Acc[i][0] += basedrag*dist*vel - basestiffness*dist;
+            Acc[i][0] += basedragLat*dist*vel - basestiffness*dist;
         }
         if(particles_[i]->position[2] < -t_depth/2.0)
         {
             double vel = (particles_[i]->position[2] - particles_[i]->prev_position[2])/params_.timeStep;
             double dist = -t_depth/2.0 - particles_[i]->position[2];
 
-            Acc[i][2] += basestiffness*dist - basedrag*dist*vel;
+            Acc[i][2] += basestiffness*dist - basedragLat*dist*vel;
         }
         if(particles_[i]->position[2] > t_depth/2.0)
         {
             double vel = (particles_[i]->position[2] - particles_[i]->prev_position[2])/params_.timeStep;
             double dist = particles_[i]->position[2] - t_depth/2.0;
 
-            Acc[i][2] +=  basedrag*dist*vel - basestiffness*dist;
+            Acc[i][2] +=  basedragLat*dist*vel - basestiffness*dist;
+        }
+        if(particles_[i]->position[1] > t_height/2.0)
+        {
+            double vel = (particles_[i]->position[1] - particles_[i]->prev_position[1])/params_.timeStep;
+            double dist = particles_[i]->position[1] - t_height/2.0;
+
+            Acc[i][1] += basedragLat*dist*vel - basestiffness*dist;
         }
     }
 }
@@ -266,10 +307,17 @@ bool FluidsHook::mouseClicked(igl::opengl::glfw::Viewer &viewer, Eigen::Vector3d
 {
     if (pressed) true;
 
-    std::cout << "CLICKED\n";
-
     pressed = true;
-    startV = dir;
+
+    // Calculate startV
+    Eigen::Matrix4f view = viewer.core.view;
+    Eigen::Vector4f eye = view.inverse() * Eigen::Vector4f(0, 0, 0, 1.0f);
+    for (int i = 0; i < 3; i++)
+    {
+
+        eye_[i] = eye[i] + dir[i];
+        startV[i] = dir[i];
+    }
 
     return true;
 }
@@ -280,9 +328,16 @@ bool FluidsHook::mouseReleased(igl::opengl::glfw::Viewer &viewer, Eigen::Vector3
 
     applyForceMutex_.lock();
 
-    std::cout << "RELEASED\n";
     applyForce = true;
-    endV = dir;
+    
+    // Calculate endV
+    Eigen::Matrix4f view = viewer.core.view;
+    Eigen::Vector4f eye = view.inverse() * Eigen::Vector4f(0, 0, 0, 1.0f);
+    for (int i = 0; i < 3; i++)
+    {
+
+        endV[i] = dir[i];
+    }
 
     applyForceMutex_.unlock();
     
@@ -324,7 +379,7 @@ void FluidsHook::loadScene()
     for (int i = 0; i < num_w; i ++) {
         double x = -width/2.0 + i * width/(num_w - 1.0);
         for (int j = 0; j < num_h; j ++) {
-            double y = -height/2.0 + j * height/(num_h - 1.0) + 1.0;
+            double y = -height/2.0 + j * height/(num_h - 1.0) + 0.5;
             for (int k = 0; k < num_d; k ++) {
                 double z = -depth/2.0 + k * depth/(num_d - 1.0);
                 particles_.push_back(new Particle(Eigen::Vector3d(x, y, z), Eigen::Vector3d(((double) rand() / (RAND_MAX)), ((double) rand() / (RAND_MAX)), ((double) rand() / (RAND_MAX))) * 2.0 - Eigen::Vector3d(1,1,1), 1.0));
@@ -333,14 +388,14 @@ void FluidsHook::loadScene()
     }
 
     tankV.resize(8,3);
-    tankV << -t_width/2.0, -t_height/2.0, -t_depth/2.0,
-             -t_width/2.0, -t_height/2.0,  t_depth/2.0,
-              t_width/2.0, -t_height/2.0, -t_depth/2.0,
-              t_width/2.0, -t_height/2.0,  t_depth/2.0,
-             -t_width/2.0,  t_height/2.0, -t_depth/2.0,
-             -t_width/2.0,  t_height/2.0,  t_depth/2.0,
-              t_width/2.0,  t_height/2.0, -t_depth/2.0,
-              t_width/2.0,  t_height/2.0,  t_depth/2.0;
+    tankV << -t_width/2.0-0.08, -t_height/2.0-0.08, -t_depth/2.0-0.08,
+             -t_width/2.0-0.08, -t_height/2.0-0.08,  t_depth/2.0+0.08,
+              t_width/2.0+0.08, -t_height/2.0-0.08, -t_depth/2.0-0.08,
+              t_width/2.0+0.08, -t_height/2.0-0.08,  t_depth/2.0+0.08,
+             -t_width/2.0-0.08,  t_height/2.0+0.08, -t_depth/2.0-0.08,
+             -t_width/2.0-0.08,  t_height/2.0+0.08,  t_depth/2.0+0.08,
+              t_width/2.0+0.08,  t_height/2.0+0.08, -t_depth/2.0-0.08,
+              t_width/2.0+0.08,  t_height/2.0+0.08,  t_depth/2.0+0.08;
 
     tankE.resize(12,2);
     tankE <<
