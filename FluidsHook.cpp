@@ -152,7 +152,6 @@ void FluidsHook::computeFloorWallAcc(vector<Vector3d> &Acc) {
     // TODO. Should this be in params_?
     double basestiffness = 10000;
     double basedrag = 1000.0;
-    double basedragLat = 1000.0;
 
     // Floor force
     for(int i = 0; i < particles_.size(); i ++)
@@ -161,6 +160,13 @@ void FluidsHook::computeFloorWallAcc(vector<Vector3d> &Acc) {
         {
             double vel = (particles_[i]->position[1] - particles_[i]->prev_position[1])/params_.timeStep;
             double dist = -t_height/2.0 - particles_[i]->position[1];
+
+            Acc[i][1] += basestiffness*dist - basedrag*dist*vel;
+        }
+        else if(particles_[i]->position[1] < 0.15 && particles_[i]->position[0] <= 0.6 && abs(particles_[i]->position[1] - 0.15) <= abs(particles_[i]->position[0] - 0.6))
+        {
+            double vel = (particles_[i]->position[1] - particles_[i]->prev_position[1])/params_.timeStep;
+            double dist = 0.15 - particles_[i]->position[1];
 
             Acc[i][1] += basestiffness*dist - basedrag*dist*vel;
         }
@@ -175,7 +181,13 @@ void FluidsHook::computeFloorWallAcc(vector<Vector3d> &Acc) {
             double vel = (particles_[i]->position[0] - particles_[i]->prev_position[0])/params_.timeStep;
             double dist = -t_width/2.0 - particles_[i]->position[0];
 
-            Acc[i][0] += basestiffness*dist - basedragLat*dist*vel;
+            Acc[i][0] += basestiffness*dist - basedrag*dist*vel;
+        } else if (particles_[i]->position[0] < 0.6 && particles_[i]->position[1] <= 0.15 && abs(particles_[i]->position[1] - 0.15) > abs(particles_[i]->position[0] - 0.6))
+        {
+            double vel = (particles_[i]->position[0] - particles_[i]->prev_position[0])/params_.timeStep;
+            double dist = 0.6 - particles_[i]->position[0];
+
+            Acc[i][0] += basestiffness*dist - basedrag*dist*vel;
         }
         // Right wall force
         if(particles_[i]->position[0] > t_width/2.0)
@@ -183,7 +195,7 @@ void FluidsHook::computeFloorWallAcc(vector<Vector3d> &Acc) {
             double vel = (particles_[i]->position[0] - particles_[i]->prev_position[0])/params_.timeStep;
             double dist = particles_[i]->position[0] - t_width/2.0;
 
-            Acc[i][0] += basedragLat*dist*vel - basestiffness*dist;
+            Acc[i][0] += -basestiffness*dist - basedrag*dist*vel;
         }
         // Back wall force
         if(particles_[i]->position[2] < -t_depth/2.0)
@@ -191,7 +203,7 @@ void FluidsHook::computeFloorWallAcc(vector<Vector3d> &Acc) {
             double vel = (particles_[i]->position[2] - particles_[i]->prev_position[2])/params_.timeStep;
             double dist = -t_depth/2.0 - particles_[i]->position[2];
 
-            Acc[i][2] += basestiffness*dist - basedragLat*dist*vel;
+            Acc[i][2] += basestiffness*dist - basedrag*dist*vel;
         }
         // Front wall force
         if(particles_[i]->position[2] > t_depth/2.0)
@@ -199,7 +211,7 @@ void FluidsHook::computeFloorWallAcc(vector<Vector3d> &Acc) {
             double vel = (particles_[i]->position[2] - particles_[i]->prev_position[2])/params_.timeStep;
             double dist = particles_[i]->position[2] - t_depth/2.0;
 
-            Acc[i][2] +=  basedragLat*dist*vel - basestiffness*dist;
+            Acc[i][2] +=  -basestiffness*dist - basedrag*dist*vel;
         }
         // Roof/top wall force
         if(particles_[i]->position[1] > t_height/2.0)
@@ -207,7 +219,7 @@ void FluidsHook::computeFloorWallAcc(vector<Vector3d> &Acc) {
             double vel = (particles_[i]->position[1] - particles_[i]->prev_position[1])/params_.timeStep;
             double dist = particles_[i]->position[1] - t_height/2.0;
 
-            Acc[i][1] += basedragLat*dist*vel - basestiffness*dist;
+            Acc[i][1] += -basestiffness*dist - basedrag*dist*vel;
         }
     }
 }
@@ -373,8 +385,8 @@ bool FluidsHook::simulateOneStep()
         particles_[i]->velocity += params_.timeStep*Acc[i];
         // Bound the amount of kinetic energy of particles.
         // Otherwise, external forces (mouse drag) can indefinitely add energy to the system.
-        if (particles_[i]->velocity.norm() > 500.0) {
-            particles_[i]->velocity = particles_[i]->velocity / particles_[i]->velocity.norm() * 500.0;
+        if (particles_[i]->velocity.norm() > 30.0) {
+            particles_[i]->velocity = particles_[i]->velocity / particles_[i]->velocity.norm() * 30.0;
         }
     }
 
@@ -395,9 +407,9 @@ void FluidsHook::loadScene()
     int num_w = cbrt(num_p), num_h = cbrt(num_p), num_d = cbrt(num_p);
 
     for (int i = 0; i < num_w; i ++) {
-        double x = -width/2.0 + i * width/(num_w - 1.0) - 0.4;
+        double x = -width/2.0 + i * width/(num_w - 1.0) - 1.0;
         for (int j = 0; j < num_h; j ++) {
-            double y = -height/2.0 + j * height/(num_h - 1.0);
+            double y = -height/2.0 + j * height/(num_h - 1.0) + 0.9;
             for (int k = 0; k < num_d; k ++) {
                 double z = -depth/2.0 + k * depth/(num_d - 1.0);
                 particles_.push_back(new Particle(Eigen::Vector3d(x, y, z),
@@ -422,6 +434,33 @@ void FluidsHook::loadScene()
     // Define edges of tank.
     tankE.resize(12,2);
     tankE <<
+          0, 1,
+          0, 2,
+          1, 3,
+          2, 3,
+          1, 5,
+          3, 7,
+          2, 6,
+          0, 4,
+          4, 6,
+          4, 5,
+          5, 7,
+          6, 7;
+
+    // Define position of vertices of tank.
+    tankV2.resize(8,3);
+    tankV2 << -t_width/2.0-0.08, -t_height/2.0-0.08, -t_depth/2.0-0.08,
+             -t_width/2.0-0.08, -t_height/2.0-0.08,  t_depth/2.0+0.08,
+                             0.6-0.08, -t_height/2.0-0.08, -t_depth/2.0-0.08,
+                             0.6-0.08, -t_height/2.0-0.08,  t_depth/2.0+0.08,
+             -t_width/2.0-0.08,  0.15-0.08, -t_depth/2.0-0.08,
+             -t_width/2.0-0.08,  0.15-0.08,  t_depth/2.0+0.08,
+                             0.6-0.08,  0.15-0.08, -t_depth/2.0-0.08,
+                             0.6-0.08,  0.15-0.08,  t_depth/2.0+0.08;
+
+    // Define edges of tank.
+    tankE2.resize(12,2);
+    tankE2 <<
           0, 1,
           0, 2,
           1, 3,

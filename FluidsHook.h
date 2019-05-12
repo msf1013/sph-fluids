@@ -56,6 +56,14 @@ public:
               tankV.row(tankE(i,1)),
               Eigen::RowVector3d(1,1,1)
         );
+
+        for (unsigned i=0;i<tankE2.rows(); ++i)
+            viewer.data().add_edges
+            (
+              tankV2.row(tankE2(i,0)),
+              tankV2.row(tankE2(i,1)),
+              Eigen::RowVector3d(1,1,1)
+        );
     }
 
 private:
@@ -76,7 +84,10 @@ private:
     Eigen::MatrixXd tankV;
     Eigen::MatrixXi tankE;
 
-    double t_width=2.5, t_height=2.0, t_depth=1.5;
+    Eigen::MatrixXd tankV2;
+    Eigen::MatrixXi tankE2;
+
+    double t_width=4.5, t_height=3.2, t_depth=1.5;
 
     bool pressed = false;
     bool applyForce = false;
@@ -104,12 +115,4 @@ private:
     double kernelPoly6Laplacian(double r, double h);
     Vector3d kernelSpikyGradient(Vector3d R, double h);
     double kernelViscosityLaplacian(double r, double h);
-
-    double mass = 1;
-    double smoothingLength = 0.2;
-    double restDensity = 1;
-    double viscosityCoefficient = 0.1;
-    double tensionCoefficient = 1;
-    double epsColorNormal = 0.001;
-
 };
