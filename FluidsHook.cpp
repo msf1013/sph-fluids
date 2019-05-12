@@ -173,7 +173,6 @@ double FluidsHook::pointToPlaneDistance(Eigen::Vector3d p, Eigen::Vector3d v1, E
 }
 
 void FluidsHook::computeGravityAcc(vector<Vector3d> &Acc) {
-    // TODO. Where is rho?
     for(int i = 0; i < particles_.size(); i ++)
     {
         Acc[i][1] -= params_.gravityG;
