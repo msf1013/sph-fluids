@@ -188,17 +188,20 @@ void FluidsHook::computeFloorWallAcc(vector<Vector3d> &Acc) {
     // Floor force
     for(int i = 0; i < particles_.size(); i ++)
     {
-        if(particles_[i]->position[1] < -t_height/2.0)
+        // Floor of outer tank
+        if(particles_[i]->position[1] < -ot_height/2.0)
         {
             double vel = (particles_[i]->position[1] - particles_[i]->prev_position[1])/params_.timeStep;
-            double dist = -t_height/2.0 - particles_[i]->position[1];
+            double dist = -ot_height/2.0 - particles_[i]->position[1];
 
             Acc[i][1] += basestiffness*dist - basedrag*dist*vel;
         }
-        else if(particles_[i]->position[1] < 0.15 && particles_[i]->position[0] <= 0.6 && abs(particles_[i]->position[1] - 0.15) <= abs(particles_[i]->position[0] - 0.6))
+        // Roof of inner tank
+        else if(particles_[i]->position[1] < it_height && particles_[i]->position[0] <= it_width
+            && abs(particles_[i]->position[1] - it_height) <= abs(particles_[i]->position[0] - it_width))
         {
             double vel = (particles_[i]->position[1] - particles_[i]->prev_position[1])/params_.timeStep;
-            double dist = 0.15 - particles_[i]->position[1];
+            double dist = it_height - particles_[i]->position[1];
 
             Acc[i][1] += basestiffness*dist - basedrag*dist*vel;
         }
@@ -207,49 +210,52 @@ void FluidsHook::computeFloorWallAcc(vector<Vector3d> &Acc) {
     // Wall forces
     for(int i = 0; i < particles_.size(); i ++)
     {
-        // Left wall force
-        if(particles_[i]->position[0] < -t_width/2.0)
+        // Left wall of outer tank
+        if(particles_[i]->position[0] < -ot_width/2.0)
         {
             double vel = (particles_[i]->position[0] - particles_[i]->prev_position[0])/params_.timeStep;
-            double dist = -t_width/2.0 - particles_[i]->position[0];
-
-            Acc[i][0] += basestiffness*dist - basedrag*dist*vel;
-        } else if (particles_[i]->position[0] < 0.6 && particles_[i]->position[1] <= 0.15 && abs(particles_[i]->position[1] - 0.15) > abs(particles_[i]->position[0] - 0.6))
-        {
-            double vel = (particles_[i]->position[0] - particles_[i]->prev_position[0])/params_.timeStep;
-            double dist = 0.6 - particles_[i]->position[0];
+            double dist = -ot_width/2.0 - particles_[i]->position[0];
 
             Acc[i][0] += basestiffness*dist - basedrag*dist*vel;
         }
-        // Right wall force
-        if(particles_[i]->position[0] > t_width/2.0)
+        // Right wall of inner tank
+        else if (particles_[i]->position[0] < it_width && particles_[i]->position[1] <= it_height &&
+            abs(particles_[i]->position[1] - it_height) > abs(particles_[i]->position[0] - it_width))
         {
             double vel = (particles_[i]->position[0] - particles_[i]->prev_position[0])/params_.timeStep;
-            double dist = particles_[i]->position[0] - t_width/2.0;
+            double dist = it_width - particles_[i]->position[0];
+
+            Acc[i][0] += basestiffness*dist - basedrag*dist*vel;
+        }
+        // Right wall of outer tank
+        if(particles_[i]->position[0] > ot_width/2.0)
+        {
+            double vel = (particles_[i]->position[0] - particles_[i]->prev_position[0])/params_.timeStep;
+            double dist = particles_[i]->position[0] - ot_width/2.0;
 
             Acc[i][0] += -basestiffness*dist - basedrag*dist*vel;
         }
-        // Back wall force
-        if(particles_[i]->position[2] < -t_depth/2.0)
+        // Back wall of outer tank
+        if(particles_[i]->position[2] < -ot_depth/2.0)
         {
             double vel = (particles_[i]->position[2] - particles_[i]->prev_position[2])/params_.timeStep;
-            double dist = -t_depth/2.0 - particles_[i]->position[2];
+            double dist = -ot_depth/2.0 - particles_[i]->position[2];
 
             Acc[i][2] += basestiffness*dist - basedrag*dist*vel;
         }
-        // Front wall force
-        if(particles_[i]->position[2] > t_depth/2.0)
+        // Front wall of outer tank
+        if(particles_[i]->position[2] > ot_depth/2.0)
         {
             double vel = (particles_[i]->position[2] - particles_[i]->prev_position[2])/params_.timeStep;
-            double dist = particles_[i]->position[2] - t_depth/2.0;
+            double dist = particles_[i]->position[2] - ot_depth/2.0;
 
             Acc[i][2] +=  -basestiffness*dist - basedrag*dist*vel;
         }
-        // Roof/top wall force
-        if(particles_[i]->position[1] > t_height/2.0)
+        // Roof/top of outer tank
+        if(particles_[i]->position[1] > ot_height/2.0)
         {
             double vel = (particles_[i]->position[1] - particles_[i]->prev_position[1])/params_.timeStep;
-            double dist = particles_[i]->position[1] - t_height/2.0;
+            double dist = particles_[i]->position[1] - ot_height/2.0;
 
             Acc[i][1] += -basestiffness*dist - basedrag*dist*vel;
         }
@@ -400,7 +406,7 @@ bool FluidsHook::mouseReleased(igl::opengl::glfw::Viewer &viewer, Eigen::Vector3
 
 bool FluidsHook::simulateOneStep()
 {   
-    // Implicit Euler
+    // Velocity Verlet integration
     time_ += params_.timeStep;
 
     // Calculate position_(i+1)
@@ -452,47 +458,47 @@ void FluidsHook::loadScene()
         }
     }
 
-    // Define position of vertices of tank.
-    tankV.resize(8,3);
-    tankV << -t_width/2.0-0.08, -t_height/2.0-0.08, -t_depth/2.0-0.08,
-             -t_width/2.0-0.08, -t_height/2.0-0.08,  t_depth/2.0+0.08,
-              t_width/2.0+0.08, -t_height/2.0-0.08, -t_depth/2.0-0.08,
-              t_width/2.0+0.08, -t_height/2.0-0.08,  t_depth/2.0+0.08,
-             -t_width/2.0-0.08,  t_height/2.0+0.08, -t_depth/2.0-0.08,
-             -t_width/2.0-0.08,  t_height/2.0+0.08,  t_depth/2.0+0.08,
-              t_width/2.0+0.08,  t_height/2.0+0.08, -t_depth/2.0-0.08,
-              t_width/2.0+0.08,  t_height/2.0+0.08,  t_depth/2.0+0.08;
+    // Define position of vertices of outer tank.
+    oTankV.resize(8,3);
+    oTankV << -ot_width/2.0-0.08, -ot_height/2.0-0.08, -ot_depth/2.0-0.08,
+              -ot_width/2.0-0.08, -ot_height/2.0-0.08,  ot_depth/2.0+0.08,
+               ot_width/2.0+0.08, -ot_height/2.0-0.08, -ot_depth/2.0-0.08,
+               ot_width/2.0+0.08, -ot_height/2.0-0.08,  ot_depth/2.0+0.08,
+              -ot_width/2.0-0.08,  ot_height/2.0+0.08, -ot_depth/2.0-0.08,
+              -ot_width/2.0-0.08,  ot_height/2.0+0.08,  ot_depth/2.0+0.08,
+               ot_width/2.0+0.08,  ot_height/2.0+0.08, -ot_depth/2.0-0.08,
+               ot_width/2.0+0.08,  ot_height/2.0+0.08,  ot_depth/2.0+0.08;
 
-    // Define edges of tank.
-    tankE.resize(12,2);
-    tankE <<
-          0, 1,
-          0, 2,
-          1, 3,
-          2, 3,
-          1, 5,
-          3, 7,
-          2, 6,
-          0, 4,
-          4, 6,
-          4, 5,
-          5, 7,
-          6, 7;
+    // Define edges of outer tank.
+    oTankE.resize(12,2);
+    oTankE <<
+             0, 1,
+             0, 2,
+             1, 3,
+             2, 3,
+             1, 5,
+             3, 7,
+             2, 6,
+             0, 4,
+             4, 6,
+             4, 5,
+             5, 7,
+             6, 7;
 
-    // Define position of vertices of tank.
-    tankV2.resize(8,3);
-    tankV2 << -t_width/2.0-0.08, -t_height/2.0-0.08, -t_depth/2.0-0.08,
-             -t_width/2.0-0.08, -t_height/2.0-0.08,  t_depth/2.0+0.08,
-                             0.6-0.08, -t_height/2.0-0.08, -t_depth/2.0-0.08,
-                             0.6-0.08, -t_height/2.0-0.08,  t_depth/2.0+0.08,
-             -t_width/2.0-0.08,  0.15-0.08, -t_depth/2.0-0.08,
-             -t_width/2.0-0.08,  0.15-0.08,  t_depth/2.0+0.08,
-                             0.6-0.08,  0.15-0.08, -t_depth/2.0-0.08,
-                             0.6-0.08,  0.15-0.08,  t_depth/2.0+0.08;
+    // Define position of vertices of inner tank.
+    iTankV.resize(8,3);
+    iTankV << -ot_width/2.0-0.08, -ot_height/2.0-0.08, -it_depth/2.0-0.08,
+              -ot_width/2.0-0.08, -ot_height/2.0-0.08,  it_depth/2.0+0.08,
+                   it_width-0.08, -ot_height/2.0-0.08, -it_depth/2.0-0.08,
+                   it_width-0.08, -ot_height/2.0-0.08,  it_depth/2.0+0.08,
+              -ot_width/2.0-0.08,      it_height-0.08, -it_depth/2.0-0.08,
+              -ot_width/2.0-0.08,      it_height-0.08,  it_depth/2.0+0.08,
+                   it_width-0.08,      it_height-0.08, -it_depth/2.0-0.08,
+                   it_width-0.08,      it_height-0.08,  it_depth/2.0+0.08;
 
-    // Define edges of tank.
-    tankE2.resize(12,2);
-    tankE2 <<
+    // Define edges of inner tank.
+    iTankE.resize(12,2);
+    iTankE <<
           0, 1,
           0, 2,
           1, 3,

@@ -48,20 +48,22 @@ public:
         }
 
         viewer.data().add_points(particlesPos,Eigen::RowVector3d(35.0/255.0,137.0/255.0,218/255.0));
-        
-        for (unsigned i=0;i<tankE.rows(); ++i)
+
+        // Render outer tank edges
+        for (unsigned i=0;i<oTankE.rows(); ++i)
             viewer.data().add_edges
             (
-              tankV.row(tankE(i,0)),
-              tankV.row(tankE(i,1)),
+              oTankV.row(oTankE(i,0)),
+              oTankV.row(oTankE(i,1)),
               Eigen::RowVector3d(1,1,1)
         );
-
-        for (unsigned i=0;i<tankE2.rows(); ++i)
+        
+        // Render inner tank edges
+        for (unsigned i=0;i<iTankE.rows(); ++i)
             viewer.data().add_edges
             (
-              tankV2.row(tankE2(i,0)),
-              tankV2.row(tankE2(i,1)),
+              iTankV.row(iTankE(i,0)),
+              iTankV.row(iTankE(i,1)),
               Eigen::RowVector3d(1,1,1)
         );
     }
@@ -81,13 +83,16 @@ private:
     Eigen::MatrixXi renderF;
 
     std::vector<Particle *> particles_;
-    Eigen::MatrixXd tankV;
-    Eigen::MatrixXi tankE;
 
-    Eigen::MatrixXd tankV2;
-    Eigen::MatrixXi tankE2;
+    // Dimensions of outer tank.
+    double ot_width=4.5, ot_height=3.2, ot_depth=1.5;
+    Eigen::MatrixXd oTankV;
+    Eigen::MatrixXi oTankE;
 
-    double t_width=4.5, t_height=3.2, t_depth=1.5;
+    // Dimensions of inner tank.
+    double it_width=0.6, it_height=0.15, it_depth=1.5;
+    Eigen::MatrixXd iTankV;
+    Eigen::MatrixXi iTankE;
 
     bool pressed = false;
     bool applyForce = false;
