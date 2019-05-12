@@ -8,14 +8,12 @@
 class Particle
 {
 public:
-    Particle(Eigen::Vector3d position, Eigen::Vector3d velocity, double mass);
+    Particle(Eigen::Vector3d position, Eigen::Vector3d velocity);
     ~Particle();
 
     Eigen::Vector3d position;
     Eigen::Vector3d prev_position;
     Eigen::Vector3d velocity;
-
-    double mass;
 };
 
 #endif // PARTICLE_H

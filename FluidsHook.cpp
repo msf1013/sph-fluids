@@ -38,7 +38,7 @@ void FluidsHook::drawGUI(igl::opengl::glfw::imgui::ImGuiMenu &menu)
         ImGui::InputFloat("Rest Density", &params_.restDensity, 0, 0, 4);
         ImGui::InputFloat("Viscosity Coefficient", &params_.viscosityCoefficient, 0, 0, 4);
         ImGui::InputFloat("Tension Coefficient", &params_.tensionCoefficient, 0, 0, 4);
-        ImGui::InputFloat("Eps Color Normal", &params_.epsColorNormal, 0, 0, 4);
+        ImGui::InputFloat("Epsilon Color Normal", &params_.epsColorNormal, 0, 0, 4);
     }    
 }
 
@@ -315,7 +315,7 @@ double FluidsHook::kernelViscosityLaplacian(double r, double h) {
 
 bool FluidsHook::mouseClicked(igl::opengl::glfw::Viewer &viewer, Eigen::Vector3d dir)
 {
-    if (pressed) true;
+    if (pressed) return true;
 
     pressed = true;
 
@@ -372,7 +372,7 @@ bool FluidsHook::simulateOneStep()
     for (int i = 0; i < particles_.size(); i ++) {
         particles_[i]->velocity += params_.timeStep*Acc[i];
         // Bound the amount of kinetic energy of particles.
-        // External forces (mouse drag) can indefinitely add energy to the system.
+        // Otherwise, external forces (mouse drag) can indefinitely add energy to the system.
         if (particles_[i]->velocity.norm() > 500.0) {
             particles_[i]->velocity = particles_[i]->velocity / particles_[i]->velocity.norm() * 500.0;
         }
@@ -403,8 +403,7 @@ void FluidsHook::loadScene()
                 particles_.push_back(new Particle(Eigen::Vector3d(x, y, z),
                                                   Eigen::Vector3d(((double) rand() / (RAND_MAX)),
                                                                   ((double) rand() / (RAND_MAX)),
-                                                                  ((double) rand() / (RAND_MAX))) * 2.0 - Eigen::Vector3d(1,1,1),
-                                                  1.0));
+                                                                  ((double) rand() / (RAND_MAX))) * 2.0 - Eigen::Vector3d(1,1,1)));
             }
         }
     }
