@@ -18,24 +18,27 @@ FluidsHook::FluidsHook() : PhysicsHook(), sceneFile_("box.scn")
 
 void FluidsHook::drawGUI(igl::opengl::glfw::imgui::ImGuiMenu &menu)
 {
-    if (ImGui::CollapsingHeader("Scene", ImGuiTreeNodeFlags_DefaultOpen))
-    {
-        ImGui::InputText("Filename", sceneFile_);
-    }
     if (ImGui::CollapsingHeader("Simulation Options", ImGuiTreeNodeFlags_DefaultOpen))
     {
-        ImGui::InputFloat("Timestep", &params_.timeStep, 0, 0, 3);
-        ImGui::DragFloat("Newton Tolerance", &params_.NewtonTolerance, 0.01, 1e-16, 1e-1, "%.3e", 10);
-        ImGui::InputInt("Newton Max Iters", &params_.NewtonMaxIters);
+        ImGui::Combo("Number of particles", &params_.numParticles_index, params_.numParticles, sizeof(params_.numParticles) / sizeof(params_.numParticles[0]));
+        ImGui::InputFloat("Particle mass", &params_.particleMass, 0, 0, 4);
+        ImGui::InputFloat("Timestep", &params_.timeStep, 0, 0, 4);
     }
     if (ImGui::CollapsingHeader("Forces", ImGuiTreeNodeFlags_DefaultOpen))
     {
+        ImGui::Checkbox("Pressure Enabled", &params_.pressureEnabled);
+        ImGui::Checkbox("Viscosity Enabled", &params_.viscosityEnabled);
+        ImGui::Checkbox("Surface Tension Enabled", &params_.surfaceTensionEnabled);
         ImGui::Checkbox("Gravity Enabled", &params_.gravityEnabled);
-        ImGui::InputFloat("Gravity G", &params_.gravityG, 0, 0, 3);
-        ImGui::Checkbox("Penalty Forces Enabled", &params_.penaltyEnabled);
-        ImGui::InputFloat("Penalty Stiffness", &params_.penaltyStiffness, 0, 0, 3);
-        ImGui::Checkbox("Impulses Enabled", &params_.impulsesEnabled);
-        ImGui::InputFloat("CoR", &params_.CoR, 0, 0, 3);
+    }
+    if (ImGui::CollapsingHeader("Forces Parameters", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        ImGui::InputFloat("Gravity G", &params_.gravityG, 0, 0, 4);
+        ImGui::InputFloat("Smoothing Length", &params_.smoothingLength, 0, 0, 4);
+        ImGui::InputFloat("Rest Density", &params_.restDensity, 0, 0, 4);
+        ImGui::InputFloat("Viscosity Coefficient", &params_.viscosityCoefficient, 0, 0, 4);
+        ImGui::InputFloat("Tension Coefficient", &params_.tensionCoefficient, 0, 0, 4);
+        ImGui::InputFloat("Eps Color Normal", &params_.epsColorNormal, 0, 0, 4);
     }    
 }
 
