@@ -74,17 +74,23 @@ void FluidsHook::computeAcc(vector<Vector3d> &Acc)
     if (applyExternalForce) {
         computeExternalAcc(Acc);
     }
-
-    computeGravityAcc(Acc);
+    if (params_.gravityEnabled) {
+        computeGravityAcc(Acc);
+    }
     computeFloorWallAcc(Acc);
 
     vector<double> Density(particles_.size());
     computeDensity(Density);
 
-    computePressureAcc(Density, Acc);
-    computeViscosityAcc(Density, Acc);
-    computeSurfaceTensionAcc(Density, Acc);
-
+    if (params_.pressureEnabled) {
+        computePressureAcc(Density, Acc);
+    }
+    if (params_.viscosityEnabled) {
+        computeViscosityAcc(Density, Acc);
+    }
+    if (params_.surfaceTensionEnabled) {
+        computeSurfaceTensionAcc(Density, Acc);
+    }
 }
 
 void FluidsHook::computeDensity(vector<double> &Density) {
@@ -92,8 +98,8 @@ void FluidsHook::computeDensity(vector<double> &Density) {
     for (int i = 0; i < particles_.size(); ++i) {
         double density = 0;
         for (int j = 0; j < particles_.size(); ++j) {
-            density += mass * kernelPoly6( 
-                (particles_[i]->position - particles_[j]->position).norm(), smoothingLength );
+            density += params_.particleMass * kernelPoly6( 
+                (particles_[i]->position - particles_[j]->position).norm(), params_.smoothingLength );
         }
         Density[i] = density;
     }
@@ -211,14 +217,14 @@ void FluidsHook::computePressureAcc(const vector<double> &Density, vector<Vector
     // Computing Pressure.
     vector<double> Pressure(particles_.size());
     for (int i = 0; i < particles_.size(); ++i) {
-        Pressure[i] = GAS_CONSTANT * (Density[i] - restDensity);
+        Pressure[i] = GAS_CONSTANT * (Density[i] - params_.restDensity);
     }
 
     for (int i = 0; i < particles_.size(); ++i) {
         Vector3d force = Vector3d::Zero();
         for (int j = 0; j < particles_.size(); ++j) {
-            force += -mass * ( (Pressure[i] + Pressure[j]) / (2 * Density[j]) ) *
-                kernelSpikyGradient(particles_[i]->position - particles_[j]->position, smoothingLength);
+            force += -params_.particleMass * ( (Pressure[i] + Pressure[j]) / (2 * Density[j]) ) *
+                kernelSpikyGradient(particles_[i]->position - particles_[j]->position, params_.smoothingLength);
         }
         Acc[i] += force / Density[i];
     }
@@ -229,11 +235,11 @@ void FluidsHook::computeViscosityAcc(const vector<double> &Density, vector<Vecto
     for (int i = 0; i < particles_.size(); ++i) {
         Vector3d force = Vector3d::Zero();
         for (int j = 0; j < particles_.size(); ++j) {
-            force += mass * ( (particles_[j]->velocity - particles_[i]->velocity) /
+            force += params_.particleMass * ( (particles_[j]->velocity - particles_[i]->velocity) /
                 Density[j] ) * kernelViscosityLaplacian( (particles_[i]->position 
-                    - particles_[j]->position).norm(), smoothingLength );
+                    - particles_[j]->position).norm(), params_.smoothingLength );
         }
-        Acc[i] += viscosityCoefficient * force / Density[i];
+        Acc[i] += params_.viscosityCoefficient * force / Density[i];
     }
 }
 
@@ -244,8 +250,8 @@ void FluidsHook::computeSurfaceTensionAcc(const vector<double> &Density, vector<
     for (int i = 0; i < particles_.size(); ++i) {
         Vector3d grad = Vector3d::Zero();
         for (int j = 0; j < particles_.size(); ++j) {
-            grad += (mass / Density[j]) * kernelPoly6Gradient( particles_[i]->position 
-                    - particles_[j]->position, smoothingLength );
+            grad += (params_.particleMass / Density[j]) * kernelPoly6Gradient( particles_[i]->position 
+                    - particles_[j]->position, params_.smoothingLength );
         }
         GradientColorField[i] = grad;
     }
@@ -253,11 +259,11 @@ void FluidsHook::computeSurfaceTensionAcc(const vector<double> &Density, vector<
     for (int i = 0; i < particles_.size(); ++i) {
         double force = 0;
         for (int j = 0; j < particles_.size(); ++j) {
-            if (GradientColorField[i].norm() > epsColorNormal) break;
+            if (GradientColorField[i].norm() > params_.epsColorNormal) break;
             force += kernelPoly6Laplacian( (particles_[i]->position 
-                    - particles_[j]->position).norm(), smoothingLength );
+                    - particles_[j]->position).norm(), params_.smoothingLength );
         }
-        Acc[i] += -tensionCoefficient * force * GradientColorField[i] / (
+        Acc[i] += -params_.tensionCoefficient * force * GradientColorField[i] / (
             Density[i] / GradientColorField[i].norm());
     }
 }
@@ -385,7 +391,8 @@ void FluidsHook::loadScene()
     double width = 1.3, height = 1.3, depth = 1.3;
 
     // Number of particles per dimension of the box.
-    int num_w = 8, num_h = 8, num_d = 8;
+    int num_p = atoi(params_.numParticles[params_.numParticles_index]);
+    int num_w = cbrt(num_p), num_h = cbrt(num_p), num_d = cbrt(num_p);
 
     for (int i = 0; i < num_w; i ++) {
         double x = -width/2.0 + i * width/(num_w - 1.0) - 0.4;
