@@ -6,7 +6,6 @@
 #include <Eigen/StdVector>
 #include "SimParameters.h"
 #include <set>
-#include "CollisionDetection.h"
 #include "Particle.h"
 
 class RigidBodyTemplate;
@@ -70,11 +69,6 @@ private:
     SimParameters params_;
     std::string sceneFile_;
 
-    std::vector<RigidBodyTemplate *> templates_;
-    std::vector<RigidBodyInstance *> bodies_;
-
-    RigidBodyTemplate *birdTemplate_;
-
     Eigen::MatrixXd renderQ;
     Eigen::MatrixXi renderF;
 
@@ -91,7 +85,7 @@ private:
     Eigen::Vector3d endV;
     Eigen::Vector3d eye_;
 
-    Eigen::Vector3d forceAlongPlane(Eigen::Vector3d startV, Eigen::Vector3d endV);
+    Eigen::Vector3d accAlongPlane(Eigen::Vector3d startV, Eigen::Vector3d endV);
     double pointToPlaneDistance(Eigen::Vector3d p, Eigen::Vector3d v1, Eigen::Vector3d v2);
 
 

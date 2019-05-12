@@ -1,9 +1,5 @@
-#include "RigidBodyInstance.h"
-#include "VectorMath.h"
-#include "RigidBodyTemplate.h"
 #include <Eigen/Geometry>
 #include <iostream>
-#include "CollisionDetection.h"
 #include "Particle.h"
 
 using namespace Eigen;

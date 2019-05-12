@@ -1,9 +1,5 @@
 #include "FluidsHook.h"
-#include "RigidBodyTemplate.h"
-#include "RigidBodyInstance.h"
-#include "VectorMath.h"
 #include "igl/opengl/glfw/imgui/ImGuiHelpers.h"
-#include "CollisionDetection.h"
 #include "Particle.h"
 #include <Eigen/Geometry>
 #include <stdlib.h>
@@ -102,25 +98,25 @@ void FluidsHook::computeDensity(vector<double> &Density) {
 
 void FluidsHook::computeExternalAcc(vector<Vector3d> &Acc)
 {
-    Eigen::Vector3d force = forceAlongPlane(startV, endV) * 3200.0;
+    Eigen::Vector3d acc = accAlongPlane(startV, endV) * 3200.0;
     for (int i = 0; i < particles_.size(); i ++) {
         double distance = pointToPlaneDistance(particles_[i]->position, startV, endV); 
 
         if (distance < 0.1) {
-            Acc[i] += force * (1.0 - distance) * (1.0 - distance);
+            Acc[i] += acc * (1.0 - distance) * (1.0 - distance);
         }
     }
     applyExternalForce = false;
 }
 
-Eigen::Vector3d FluidsHook::forceAlongPlane(Eigen::Vector3d startV, Eigen::Vector3d endV)
+Eigen::Vector3d FluidsHook::accAlongPlane(Eigen::Vector3d startV, Eigen::Vector3d endV)
 {
     Eigen::Vector3d startU = startV / startV.norm();
     Eigen::Vector3d endU = endV / endV.norm();
 
-    Eigen::Vector3d force = endU - startU;
+    Eigen::Vector3d acc = endU - startU;
 
-    return force / force.norm();
+    return acc / acc.norm();
 }
 
 double FluidsHook::pointToPlaneDistance(Eigen::Vector3d p, Eigen::Vector3d v1, Eigen::Vector3d v2) {
@@ -143,13 +139,13 @@ void FluidsHook::computeGravityAcc(vector<Vector3d> &Acc) {
 }
 
 void FluidsHook::computeFloorWallAcc(vector<Vector3d> &Acc) {
-
-    // Floor force
+    // Compute wall/floor bouncing forces
     // TODO. Should this be in params_?
     double basestiffness = 10000;
     double basedrag = 1000.0;
     double basedragLat = 1000.0;
 
+    // Floor force
     for(int i = 0; i < particles_.size(); i ++)
     {
         if(particles_[i]->position[1] < -t_height/2.0)
@@ -164,6 +160,7 @@ void FluidsHook::computeFloorWallAcc(vector<Vector3d> &Acc) {
     // Wall forces
     for(int i = 0; i < particles_.size(); i ++)
     {
+        // Left wall force
         if(particles_[i]->position[0] < -t_width/2.0)
         {
             double vel = (particles_[i]->position[0] - particles_[i]->prev_position[0])/params_.timeStep;
@@ -171,6 +168,7 @@ void FluidsHook::computeFloorWallAcc(vector<Vector3d> &Acc) {
 
             Acc[i][0] += basestiffness*dist - basedragLat*dist*vel;
         }
+        // Right wall force
         if(particles_[i]->position[0] > t_width/2.0)
         {
             double vel = (particles_[i]->position[0] - particles_[i]->prev_position[0])/params_.timeStep;
@@ -178,6 +176,7 @@ void FluidsHook::computeFloorWallAcc(vector<Vector3d> &Acc) {
 
             Acc[i][0] += basedragLat*dist*vel - basestiffness*dist;
         }
+        // Back wall force
         if(particles_[i]->position[2] < -t_depth/2.0)
         {
             double vel = (particles_[i]->position[2] - particles_[i]->prev_position[2])/params_.timeStep;
@@ -185,6 +184,7 @@ void FluidsHook::computeFloorWallAcc(vector<Vector3d> &Acc) {
 
             Acc[i][2] += basestiffness*dist - basedragLat*dist*vel;
         }
+        // Front wall force
         if(particles_[i]->position[2] > t_depth/2.0)
         {
             double vel = (particles_[i]->position[2] - particles_[i]->prev_position[2])/params_.timeStep;
@@ -192,6 +192,7 @@ void FluidsHook::computeFloorWallAcc(vector<Vector3d> &Acc) {
 
             Acc[i][2] +=  basedragLat*dist*vel - basestiffness*dist;
         }
+        // Roof/top wall force
         if(particles_[i]->position[1] > t_height/2.0)
         {
             double vel = (particles_[i]->position[1] - particles_[i]->prev_position[1])/params_.timeStep;
@@ -355,7 +356,6 @@ bool FluidsHook::simulateOneStep()
         particles_[i]->position += params_.timeStep*particles_[i]->velocity;
     }
 
-    // TODO. This is not useful.. making 3*size eigen, rather use vector of 3D eigen.
     // Calculate velocity_(i+1) with position_(i+1)
     vector<Vector3d> Acc(particles_.size());
     computeAcc(Acc);
@@ -373,20 +373,28 @@ void FluidsHook::loadScene()
         delete p;
     particles_.clear();
 
-    double width = 2.0, height = 1.0, depth = 1.0;
+    // Dimensions of particles 'box'.
+    double width = 1.3, height = 1.3, depth = 1.3;
+
+    // Number of particles per dimension of the box.
     int num_w = 8, num_h = 8, num_d = 8;
 
     for (int i = 0; i < num_w; i ++) {
-        double x = -width/2.0 + i * width/(num_w - 1.0);
+        double x = -width/2.0 + i * width/(num_w - 1.0) - 0.4;
         for (int j = 0; j < num_h; j ++) {
-            double y = -height/2.0 + j * height/(num_h - 1.0) + 0.5;
+            double y = -height/2.0 + j * height/(num_h - 1.0);
             for (int k = 0; k < num_d; k ++) {
                 double z = -depth/2.0 + k * depth/(num_d - 1.0);
-                particles_.push_back(new Particle(Eigen::Vector3d(x, y, z), Eigen::Vector3d(((double) rand() / (RAND_MAX)), ((double) rand() / (RAND_MAX)), ((double) rand() / (RAND_MAX))) * 2.0 - Eigen::Vector3d(1,1,1), 1.0));
+                particles_.push_back(new Particle(Eigen::Vector3d(x, y, z),
+                                                  Eigen::Vector3d(((double) rand() / (RAND_MAX)),
+                                                                  ((double) rand() / (RAND_MAX)),
+                                                                  ((double) rand() / (RAND_MAX))) * 2.0 - Eigen::Vector3d(1,1,1),
+                                                  1.0));
             }
         }
     }
 
+    // Define position of vertices of tank.
     tankV.resize(8,3);
     tankV << -t_width/2.0-0.08, -t_height/2.0-0.08, -t_depth/2.0-0.08,
              -t_width/2.0-0.08, -t_height/2.0-0.08,  t_depth/2.0+0.08,
@@ -397,6 +405,7 @@ void FluidsHook::loadScene()
               t_width/2.0+0.08,  t_height/2.0+0.08, -t_depth/2.0-0.08,
               t_width/2.0+0.08,  t_height/2.0+0.08,  t_depth/2.0+0.08;
 
+    // Define edges of tank.
     tankE.resize(12,2);
     tankE <<
           0, 1,
