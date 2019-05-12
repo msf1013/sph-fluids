@@ -148,7 +148,7 @@ void FluidsHook::computeFloorWallAcc(vector<Vector3d> &Acc) {
     // TODO. Should this be in params_?
     double basestiffness = 10000;
     double basedrag = 1000.0;
-    double basedragLat = 2000.0;
+    double basedragLat = 1000.0;
 
     for(int i = 0; i < particles_.size(); i ++)
     {

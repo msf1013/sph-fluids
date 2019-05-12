@@ -82,7 +82,7 @@ private:
     Eigen::MatrixXd tankV;
     Eigen::MatrixXi tankE;
 
-    double t_width=3.0, t_height=1.5, t_depth=1.5;
+    double t_width=2.5, t_height=2.0, t_depth=1.5;
 
     bool pressed = false;
     bool applyForce = false;
@@ -101,6 +101,7 @@ private:
     void computePressureAcc(const vector<double> &Density, vector<Vector3d> &Acc);
     void computeViscosityAcc(const vector<double> &Density, vector<Vector3d> &Acc);
     void computeSurfaceTensionAcc(const vector<double> &Density, vector<Vector3d> &Acc);
+    void computeExternalAcc(vector<Vector3d> &Acc);
 
     void computeDensity(vector<double> &Density);
 
