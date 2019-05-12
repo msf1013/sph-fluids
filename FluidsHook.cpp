@@ -362,6 +362,11 @@ bool FluidsHook::simulateOneStep()
 
     for (int i = 0; i < particles_.size(); i ++) {
         particles_[i]->velocity += params_.timeStep*Acc[i];
+        // Bound the amount of kinetic energy of particles.
+        // External forces (mouse drag) can indefinitely add energy to the system.
+        if (particles_[i]->velocity.norm() > 500.0) {
+            particles_[i]->velocity = particles_[i]->velocity / particles_[i]->velocity.norm() * 500.0;
+        }
     }
 
     return false;
