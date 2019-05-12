@@ -6,8 +6,6 @@
 #include <cmath>
 
 using namespace Eigen;
-using Eigen::Vector3d;
-using std::vector;
 
 #define PI 3.14159265358979323846
 #define GAS_CONSTANT 8.3144598
@@ -71,6 +69,10 @@ void FluidsHook::computeAcc(vector<Vector3d> &Acc)
 {
     for (auto &acc : Acc) acc.setZero();
 
+    // Recompute Grid.
+    grid.clear();
+    computeGrid();
+
     if (applyExternalForce) {
         computeExternalAcc(Acc);
     }
@@ -93,11 +95,42 @@ void FluidsHook::computeAcc(vector<Vector3d> &Acc)
     }
 }
 
+void FluidsHook::computeGrid() {
+    for (int i = 0; i < particles_.size(); ++i) {
+        grid[point_to_coord(particles_[i]->position)].push_back(i);
+    }
+}
+
+vector<int> FluidsHook::grid_neighbors(Vector3d R) {
+    vector<int> ret = grid[point_to_coord(R)];
+    double step[2] = {-params_.smoothingLength, params_.smoothingLength};
+
+    for (double x : step) {
+        for (double y : step) {
+            for (double z : step) {
+                Vector3d dR(x,y,z);
+                coord c = point_to_coord(R+dR);
+                ret.insert(ret.end(), grid[c].begin(), grid[c].end());
+            }
+        }
+    }
+    return ret;
+}
+
+FluidsHook::coord FluidsHook::point_to_coord(Vector3d R) {
+    assert (params_.smoothingLength >= 0);
+    coord a;
+    a.x = R[0] / params_.smoothingLength;
+    a.y = R[1] / params_.smoothingLength;
+    a.z = R[2] / params_.smoothingLength;
+    return a;
+}
+
 void FluidsHook::computeDensity(vector<double> &Density) {
     Density.resize(particles_.size());
     for (int i = 0; i < particles_.size(); ++i) {
         double density = 0;
-        for (int j = 0; j < particles_.size(); ++j) {
+        for (int j : grid_neighbors(particles_[i]->position)) {
             density += params_.particleMass * kernelPoly6( 
                 (particles_[i]->position - particles_[j]->position).norm(), params_.smoothingLength );
         }
@@ -222,7 +255,7 @@ void FluidsHook::computePressureAcc(const vector<double> &Density, vector<Vector
 
     for (int i = 0; i < particles_.size(); ++i) {
         Vector3d force = Vector3d::Zero();
-        for (int j = 0; j < particles_.size(); ++j) {
+        for (int j : grid_neighbors(particles_[i]->position)) {
             force += -params_.particleMass * ( (Pressure[i] + Pressure[j]) / (2 * Density[j]) ) *
                 kernelSpikyGradient(particles_[i]->position - particles_[j]->position, params_.smoothingLength);
         }
@@ -234,7 +267,7 @@ void FluidsHook::computeViscosityAcc(const vector<double> &Density, vector<Vecto
 
     for (int i = 0; i < particles_.size(); ++i) {
         Vector3d force = Vector3d::Zero();
-        for (int j = 0; j < particles_.size(); ++j) {
+        for (int j : grid_neighbors(particles_[i]->position)) {
             force += params_.particleMass * ( (particles_[j]->velocity - particles_[i]->velocity) /
                 Density[j] ) * kernelViscosityLaplacian( (particles_[i]->position 
                     - particles_[j]->position).norm(), params_.smoothingLength );
@@ -249,7 +282,7 @@ void FluidsHook::computeSurfaceTensionAcc(const vector<double> &Density, vector<
 
     for (int i = 0; i < particles_.size(); ++i) {
         Vector3d grad = Vector3d::Zero();
-        for (int j = 0; j < particles_.size(); ++j) {
+        for (int j : grid_neighbors(particles_[i]->position)) {
             grad += (params_.particleMass / Density[j]) * kernelPoly6Gradient( particles_[i]->position 
                     - particles_[j]->position, params_.smoothingLength );
         }
@@ -258,7 +291,7 @@ void FluidsHook::computeSurfaceTensionAcc(const vector<double> &Density, vector<
 
     for (int i = 0; i < particles_.size(); ++i) {
         double force = 0;
-        for (int j = 0; j < particles_.size(); ++j) {
+        for (int j : grid_neighbors(particles_[i]->position)) {
             if (GradientColorField[i].norm() > params_.epsColorNormal) break;
             force += kernelPoly6Laplacian( (particles_[i]->position 
                     - particles_[j]->position).norm(), params_.smoothingLength );

@@ -112,4 +112,16 @@ private:
     double tensionCoefficient = 1;
     double epsColorNormal = 0.001;
 
+    struct coord { 
+        int x, y, z; 
+
+        bool operator<(const coord &o) const {
+            return x < o.x || (x == o.x && y < o.y) || (x == o.x && y == o.y && z < o.z);
+        }
+    };
+
+    std::map<coord, vector<int>> grid;
+    void computeGrid();
+    coord point_to_coord(Vector3d);
+    vector<int> grid_neighbors(Vector3d);
 };
