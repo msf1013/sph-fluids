@@ -115,4 +115,17 @@ private:
     double kernelPoly6Laplacian(double r, double h);
     Vector3d kernelSpikyGradient(Vector3d R, double h);
     double kernelViscosityLaplacian(double r, double h);
+
+    struct coord { 
+        int x, y, z; 
+
+        bool operator<(const coord &o) const {
+            return x < o.x || (x == o.x && y < o.y) || (x == o.x && y == o.y && z < o.z);
+        }
+    };
+
+    std::map<coord, vector<int>> grid;
+    void computeGrid();
+    coord point_to_coord(Vector3d);
+    vector<int> grid_neighbors(Vector3d);
 };
