@@ -1,6 +1,12 @@
-# Furious Birds Milestone II Start Code
+# SPH-based Fluid Simulation
 
-A simple simulation framework using libigl and cmake. Based on Alec Jacobson's libigl example project. This project contains some boilerplate that sets up a physical simulation to run in its own thread, with rendering provided by libigl.
+Final project for CS 395T Physical Simulation.
+
+This simulation implements the Smoothed Particle Hydrodynamics method for fluids described in http://matthias-mueller-fischer.ch/publications/sca03.pdf.
+
+## Team members
+
+Abheek Ghosh and Mario Fuentes
 
 ## Compile
 
@@ -11,17 +17,15 @@ Compile this project using the standard cmake routine:
     cmake ..
     make
 
-This should find and build the dependencies and create a `birds_bin` binary.
+This should find and build the dependencies and create a `fluids_bin` binary.
 
 ## Run
 
 From within the `build` directory just issue:
 
-    ./birds_bin
+    ./fluids_bin
 
-A glfw app should launch displaying a GUI. The code will try to load scene files from either
-the ./scenes or ../scenes folder, so you need to run the binary from either the project root
-folder, or a build subdirectory.
+A glfw app should launch displaying a GUI.
 
 ## Dependencies
 
