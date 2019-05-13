@@ -48,12 +48,22 @@ public:
         }
 
         viewer.data().add_points(particlesPos,Eigen::RowVector3d(35.0/255.0,137.0/255.0,218/255.0));
-        
-        for (unsigned i=0;i<tankE.rows(); ++i)
+
+        // Render outer tank edges
+        for (unsigned i=0;i<oTankE.rows(); ++i)
             viewer.data().add_edges
             (
-              tankV.row(tankE(i,0)),
-              tankV.row(tankE(i,1)),
+              oTankV.row(oTankE(i,0)),
+              oTankV.row(oTankE(i,1)),
+              Eigen::RowVector3d(1,1,1)
+        );
+        
+        // Render inner tank edges
+        for (unsigned i=0;i<iTankE.rows(); ++i)
+            viewer.data().add_edges
+            (
+              iTankV.row(iTankE(i,0)),
+              iTankV.row(iTankE(i,1)),
               Eigen::RowVector3d(1,1,1)
         );
     }
@@ -73,10 +83,16 @@ private:
     Eigen::MatrixXi renderF;
 
     std::vector<Particle *> particles_;
-    Eigen::MatrixXd tankV;
-    Eigen::MatrixXi tankE;
 
-    double t_width=2.5, t_height=2.0, t_depth=1.5;
+    // Dimensions of outer tank.
+    double ot_width=4.5, ot_height=3.2, ot_depth=1.5;
+    Eigen::MatrixXd oTankV;
+    Eigen::MatrixXi oTankE;
+
+    // Dimensions of inner tank.
+    double it_width=0.6, it_height=0.15, it_depth=1.5;
+    Eigen::MatrixXd iTankV;
+    Eigen::MatrixXi iTankE;
 
     bool pressed = false;
     bool applyForce = false;
@@ -104,13 +120,6 @@ private:
     double kernelPoly6Laplacian(double r, double h);
     Vector3d kernelSpikyGradient(Vector3d R, double h);
     double kernelViscosityLaplacian(double r, double h);
-
-    double mass = 1;
-    double smoothingLength = 0.2;
-    double restDensity = 1;
-    double viscosityCoefficient = 0.1;
-    double tensionCoefficient = 1;
-    double epsColorNormal = 0.001;
 
     struct coord { 
         int x, y, z; 

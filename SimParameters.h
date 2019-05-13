@@ -5,7 +5,7 @@ struct SimParameters
 {
     SimParameters()
     {
-        numParticles_index = 6;
+        numParticles_index = 8;
         particleMass = 1;
         timeStep = 0.0015;
 
@@ -17,7 +17,7 @@ struct SimParameters
         gravityG = 9.8;
         smoothingLength = 0.2;
         restDensity = 1.0;
-        viscosityCoefficient = 0.1;
+        viscosityCoefficient = 50.0;
         tensionCoefficient = 1.0;
         epsColorNormal = 0.001;
 
