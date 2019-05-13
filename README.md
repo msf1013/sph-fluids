@@ -4,6 +4,8 @@ Final project for CS 395T Physical Simulation.
 
 This simulation implements the Smoothed Particle Hydrodynamics method for fluids described in http://matthias-mueller-fischer.ch/publications/sca03.pdf.
 
+![alt text](screenshots/screenshot_1.png "Running simulation")
+
 ## Team members
 
 Abheek Ghosh and Mario Fuentes
@@ -33,4 +35,4 @@ The only dependencies are [libigl](libigl.github.io/libigl/) and the dependencie
 
 We recommend you to install libigl using git by cloning the repository at https://github.com/libigl/libigl.
 
-Note from Abheek: I submitted the survey. Thanks. 
+Note from Abheek: I submitted the course evaluation survey. Thanks.
