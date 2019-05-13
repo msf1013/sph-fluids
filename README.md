@@ -4,6 +4,8 @@ Final project for CS 395T Physical Simulation.
 
 This simulation implements the Smoothed Particle Hydrodynamics method for fluids described in http://matthias-mueller-fischer.ch/publications/sca03.pdf.
 
+![alt text](screenshots/screenshot_1.png "Running simulation")
+
 ## Team members
 
 Abheek Ghosh and Mario Fuentes
