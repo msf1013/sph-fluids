@@ -32,3 +32,5 @@ A glfw app should launch displaying a GUI.
 The only dependencies are [libigl](libigl.github.io/libigl/) and the dependencies of its GUI (glfw and opengl).
 
 We recommend you to install libigl using git by cloning the repository at https://github.com/libigl/libigl.
+
+Note from Abheek: I submitted the survey. Thanks. 
